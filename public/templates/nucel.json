@@ -1,0 +1,126 @@
+{
+  "challenge_name": "GymRats NuCel",
+  "duration_days": 40,
+  "min_days_goal": 30,
+  "max_checkins_per_day": 2,
+  "min_checkin_duration_min": 30,
+  "second_checkin_min_total_min": 90,
+  "ranking_weights": { "points": 0.6, "consistency": 0.4 },
+  "activities": [
+    { "name": "Musculação", "mode": "fixed", "points": 1.0 },
+    { "name": "Natação", "mode": "fixed", "points": 1.0 },
+    { "name": "Artes marciais / Luta", "mode": "fixed", "points": 1.0 },
+    { "name": "Esportes coletivos", "mode": "fixed", "points": 1.0 },
+    { "name": "Dança", "mode": "fixed", "points": 1.0 },
+    { "name": "Tênis / Padel / Beach Tennis", "mode": "fixed", "points": 1.0 },
+    { "name": "CrossFit", "mode": "fixed", "points": 1.5 },
+    { "name": "Orange Zone", "mode": "fixed", "points": 1.3 },
+    {
+      "name": "Pilates",
+      "mode": "duration_scaled",
+      "brackets": [
+        { "up_to_min": 30, "points": 0.4 },
+        { "up_to_min": 59, "points": 0.6 },
+        { "up_to_min": 60, "points": 0.8 },
+        { "up_to_min": 90, "points": 1.2 },
+        { "up_to_min": 120, "points": 1.6 }
+      ],
+      "extra_per_30min": 0.4
+    },
+    {
+      "name": "Yoga",
+      "mode": "duration_scaled",
+      "brackets": [
+        { "up_to_min": 30, "points": 0.2 },
+        { "up_to_min": 59, "points": 0.4 },
+        { "up_to_min": 60, "points": 0.7 },
+        { "up_to_min": 90, "points": 1.05 },
+        { "up_to_min": 120, "points": 1.4 }
+      ],
+      "extra_per_30min": 0.35
+    },
+    {
+      "name": "Corrida (rua)",
+      "mode": "distance_scaled",
+      "brackets": [
+        { "up_to_km": 3, "points": 0.5 },
+        { "up_to_km": 5, "points": 0.8 },
+        { "up_to_km": 7, "points": 1.0 },
+        { "up_to_km": 10, "points": 1.3 },
+        { "up_to_km": 15, "points": 1.6 },
+        { "up_to_km": 21, "points": 2.0 },
+        { "up_to_km": 99, "points": 2.5 }
+      ],
+      "elevation_bonus": [
+        { "up_to_m": 50, "bonus": 0.0 },
+        { "up_to_m": 100, "bonus": 0.1 },
+        { "up_to_m": 200, "bonus": 0.2 },
+        { "up_to_m": 300, "bonus": 0.3 },
+        { "up_to_m": 500, "bonus": 0.5 },
+        { "up_to_m": 99999, "bonus": 0.7 }
+      ]
+    },
+    {
+      "name": "Ciclismo (ao ar livre)",
+      "mode": "distance_scaled",
+      "brackets": [
+        { "up_to_km": 10, "points": 0.5 },
+        { "up_to_km": 20, "points": 0.8 },
+        { "up_to_km": 30, "points": 1.0 },
+        { "up_to_km": 50, "points": 1.3 },
+        { "up_to_km": 80, "points": 1.6 },
+        { "up_to_km": 100, "points": 2.0 },
+        { "up_to_km": 999, "points": 2.5 }
+      ],
+      "elevation_bonus": [
+        { "up_to_m": 100, "bonus": 0.0 },
+        { "up_to_m": 300, "bonus": 0.1 },
+        { "up_to_m": 500, "bonus": 0.2 },
+        { "up_to_m": 800, "bonus": 0.3 },
+        { "up_to_m": 1000, "bonus": 0.5 },
+        { "up_to_m": 99999, "bonus": 0.7 }
+      ]
+    },
+    { "name": "Caminhada", "mode": "fixed", "points": 0.7 },
+    { "name": "Esteira (caminhada)", "mode": "fixed", "points": 0.7 },
+    {
+      "name": "Corrida na esteira",
+      "mode": "conversion",
+      "conversion_factor": 0.6,
+      "threshold_points": 1.0,
+      "below_threshold_points": 0.7
+    },
+    {
+      "name": "Bike indoor",
+      "mode": "conversion",
+      "conversion_factor": 1.6,
+      "threshold_points": 1.0,
+      "below_threshold_points": 0.7
+    },
+    {
+      "name": "Elíptico",
+      "mode": "conversion",
+      "min_distance_km": 5.5,
+      "threshold_points": 1.0,
+      "below_threshold_points": 0.7
+    },
+    {
+      "name": "Escada (stairmaster)",
+      "mode": "conversion",
+      "min_distance_km": 5.2,
+      "threshold_points": 1.0,
+      "below_threshold_points": 0.7
+    },
+    { "name": "Bike", "mode": "fixed", "points": 1.0 },
+    { "name": "Futevolei", "mode": "fixed", "points": 1.0 },
+    { "name": "Tenis", "mode": "fixed", "points": 1.0 },
+    { "name": "Basquete", "mode": "fixed", "points": 1.0 },
+    { "name": "Remo", "mode": "fixed", "points": 1.0 },
+    { "name": "Remo indoor", "mode": "fixed", "points": 1.0 },
+    { "name": "Nataçao", "mode": "fixed", "points": 1.0 },
+    { "name": "Fit Dance", "mode": "fixed", "points": 1.0 },
+    { "name": "Muay Thai", "mode": "fixed", "points": 1.0 },
+    { "name": "Hyrox", "mode": "fixed", "points": 1.5 },
+    { "name": "Spinning", "mode": "fixed", "points": 1.0 }
+  ]
+}

@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f2f7;
+  --foreground: #18181b;
+  --muted: #71717a;
+  --card: #ffffff;
+  --accent: #8a05be;
+  --accent-dim: #6b048f;
+  --border: #e4e4e8;
+  --danger: #dc2626;
+  --ring: rgba(138, 5, 190, 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-border: var(--border);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  min-height: 100dvh;
+  background: radial-gradient(
+      120% 80% at 50% -20%,
+      rgba(138, 5, 190, 0.08),
+      transparent 55%
+    ),
+    var(--background);
+  color: var(--foreground);
+}
+
+/* Bottom nav padding for challenge pages */
+.pb-nav {
+  padding-bottom: 5.5rem;
+}
+
+/* Shared surface + control shapes (less “quadrado”) */
+.ui-surface {
+  border-radius: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(24, 24, 27, 0.04),
+    0 8px 24px rgba(24, 24, 27, 0.06);
+}
+
+.ui-input {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 0.75rem 1rem;
+  box-shadow: inset 0 1px 2px rgba(24, 24, 27, 0.04);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ui-input:focus {
+  border-color: rgba(138, 5, 190, 0.45);
+  box-shadow:
+    inset 0 1px 2px rgba(24, 24, 27, 0.04),
+    0 0 0 3px var(--ring);
+}
+
+.ui-btn-primary {
+  border-radius: 1rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.875rem 1.25rem;
+  box-shadow: 0 4px 14px rgba(138, 5, 190, 0.28);
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease;
+}
+
+.ui-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.ui-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.ui-btn-secondary {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--foreground);
+  font-weight: 500;
+  padding: 0.875rem 1.25rem;
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.05);
+  transition: background 0.15s ease;
+}
+
+.ui-btn-secondary:hover:not(:disabled) {
+  background: #fafafa;
+}
