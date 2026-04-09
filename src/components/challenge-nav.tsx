@@ -2,6 +2,7 @@
 
 import {
   CirclePlus,
+  House,
   LayoutList,
   Trophy,
   UserRound,
@@ -53,6 +54,13 @@ export function ChallengeNav({
       Icon: UserRound,
       match: (p: string) =>
         p.includes(`/challenges/${challengeId}/profile`),
+    },
+    {
+      href: "/",
+      label: "Challenges",
+      Icon: House,
+      /** Home list is never “active” while this nav is shown (challenge layout only). */
+      match: () => false,
     },
   );
 

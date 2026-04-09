@@ -2,7 +2,8 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { createCheckInFormAction } from "@/app/actions/checkins";
-import { DEFAULT_OTHER_ACTIVITY_POINTS } from "@/lib/scoring/engine";
+import { formatActivityRuleDetail } from "@/lib/scoring/describe-rule";
+import { DEFAULT_OTHER_ACTIVITY_POINTS, scoreCheckIn } from "@/lib/scoring/engine";
 import {
   activityAllowsElevation,
   activityNeedsDistance,
@@ -64,6 +65,44 @@ export function CheckInWizard({
       (distanceKm !== "" && !Number.isNaN(Number(distanceKm)))) &&
     elevOk;
 
+  const selectedListedRule =
+    activityChoice !== OTHER_ACTIVITY_VALUE
+      ? findRule(scoringRules, activityChoice)
+      : undefined;
+
+  const scorePreview = useMemo(() => {
+    if (!Number.isFinite(durationMin) || durationMin < 1) return null;
+    if (needsDistance && (distanceKm === "" || Number.isNaN(Number(distanceKm)))) {
+      return null;
+    }
+    if (!elevOk) return null;
+    const distParsed = needsDistance ? Number(distanceKm) : undefined;
+    const elevForScore =
+      showElevation && elevationM !== "" && Number.isFinite(elevNum) && elevNum! >= 0
+        ? elevNum
+        : null;
+    return scoreCheckIn(
+      scoringRules,
+      resolvedActivityType,
+      durationMin,
+      distParsed,
+      {
+        elevationM: elevForScore,
+        defaultPointsIfUnknown: DEFAULT_OTHER_ACTIVITY_POINTS,
+      },
+    );
+  }, [
+    scoringRules,
+    resolvedActivityType,
+    durationMin,
+    distanceKm,
+    needsDistance,
+    showElevation,
+    elevationM,
+    elevNum,
+    elevOk,
+  ]);
+
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
       <div className="text-muted mb-6 flex items-center justify-center gap-2 text-xs font-medium">
@@ -106,6 +145,15 @@ export function CheckInWizard({
               </option>
             </select>
           </label>
+          {selectedListedRule && (
+            <div className="bg-muted/40 space-y-1.5 rounded-xl px-3 py-3">
+              <ul className="text-muted list-disc space-y-1 pl-4 text-xs leading-relaxed">
+                {formatActivityRuleDetail(selectedListedRule).map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {activityChoice === OTHER_ACTIVITY_VALUE && (
             <label className="block">
               <span className="text-muted mb-2 block text-sm font-medium">
@@ -199,6 +247,19 @@ export function CheckInWizard({
               onChange={(e) => setDescription(e.target.value)}
             />
           </label>
+          {scorePreview && (
+            <p
+              className={
+                scorePreview.ok
+                  ? "text-accent text-sm font-semibold tabular-nums"
+                  : "text-sm text-red-700"
+              }
+            >
+              {scorePreview.ok
+                ? `Estimated score: ${scorePreview.points} pts`
+                : scorePreview.error}
+            </p>
+          )}
           <div className="flex gap-3">
             <button
               type="button"
