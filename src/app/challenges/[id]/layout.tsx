@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { challengeMemberships, challenges } from "@/db/schema";
 import { getChallengeStatus } from "@/lib/challenges/status";
 import { loadChallengeLeaderboardRows } from "@/lib/load-challenge-leaderboard";
+import { parseScoringRules, type ScoringRules } from "@/lib/scoring/types";
 import { getSession } from "@/lib/session";
 
 export default async function ChallengeLayout({
@@ -69,6 +70,13 @@ export default async function ChallengeLayout({
     ? `/api/media/challenges/${ch.coverImageFile}`
     : null;
 
+  let scoringRules: ScoringRules | null = null;
+  try {
+    scoringRules = parseScoringRules(ch.scoringRules);
+  } catch {
+    scoringRules = null;
+  }
+
   return (
     <div className="pb-nav">
       <div className="px-4 pt-4">
@@ -82,9 +90,9 @@ export default async function ChallengeLayout({
           startDate={new Date(ch.startDate)}
           sessionUserId={session.user.id}
           creatorId={ch.creatorId}
-          allowCheckIn={status === "active"}
           leader={leader}
           you={you}
+          scoringRules={scoringRules}
         />
       </div>
       {children}
