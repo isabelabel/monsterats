@@ -10,6 +10,26 @@ const MAX_BYTES = 5 * 1024 * 1024;
 /** Wide cover images (JPEG/PNG/WebP). */
 const MAX_COVER_BYTES = 10 * 1024 * 1024;
 
+/** iOS/Android often omit `file.type` for gallery picks; infer from filename. */
+function inferMimeFromFileName(fileName: string): string | null {
+  const n = (fileName ?? "").toLowerCase();
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".webp")) return "image/webp";
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  if (n.endsWith(".heic") || n.endsWith(".heif")) return "image/heic";
+  return null;
+}
+
+/**
+ * Normalizes MIME (e.g. image/jpg → jpeg), infers when missing, rejects HEIC (poor web support).
+ */
+export function resolveImageMime(file: File): string {
+  let t = file.type?.trim().toLowerCase() || "";
+  if (t === "image/jpg" || t === "image/pjpeg") t = "image/jpeg";
+  if (!t) t = inferMimeFromFileName(file.name) ?? "";
+  return t;
+}
+
 function blobStorageEnabled(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
@@ -29,15 +49,30 @@ export function extForMime(mime: string): string {
 export function validateImageFile(
   file: File,
   maxBytes: number = MAX_BYTES,
-): { ok: true } | { ok: false; error: string } {
-  if (!ALLOWED.has(file.type)) {
+): { ok: true; mime: string } | { ok: false; error: string } {
+  const t = resolveImageMime(file);
+  if (t === "image/heic" || t === "image/heif") {
+    return {
+      ok: false,
+      error:
+        "HEIC/HEIF isn’t supported in the browser. On iPhone: Settings → Camera → Formats → Most Compatible, or pick a photo exported as JPEG/PNG.",
+    };
+  }
+  if (!ALLOWED.has(t)) {
+    if (!t) {
+      return {
+        ok: false,
+        error:
+          "Could not detect the image type (common on some phones). Try another photo, or save/export as JPEG or PNG first.",
+      };
+    }
     return { ok: false, error: "Use JPEG, PNG, or WebP." };
   }
   if (file.size > maxBytes) {
     const mb = Math.round(maxBytes / (1024 * 1024));
     return { ok: false, error: `Image must be under ${mb}MB.` };
   }
-  return { ok: true };
+  return { ok: true, mime: t };
 }
 
 /** Public URL for <img src> — either Blob https URL or `/api/media/...`. */
@@ -45,7 +80,7 @@ export async function saveCheckinPhoto(file: File): Promise<string> {
   const v = validateImageFile(file);
   if (!v.ok) throw new Error(v.error);
   const id = createId();
-  const ext = extForMime(file.type);
+  const ext = extForMime(v.mime);
   const name = `${id}.${ext}`;
   const buf = Buffer.from(await file.arrayBuffer());
 
@@ -53,7 +88,7 @@ export async function saveCheckinPhoto(file: File): Promise<string> {
     const blob = await put(`checkins/${name}`, buf, {
       access: "public",
       addRandomSuffix: true,
-      contentType: file.type,
+      contentType: v.mime,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
     return blob.url;
@@ -69,7 +104,7 @@ export async function saveAvatarFile(userId: string, file: File): Promise<string
   const v = validateImageFile(file);
   if (!v.ok) throw new Error(v.error);
   const id = createId();
-  const ext = extForMime(file.type);
+  const ext = extForMime(v.mime);
   const name = `${userId}-${id}.${ext}`;
   const buf = Buffer.from(await file.arrayBuffer());
 
@@ -77,7 +112,7 @@ export async function saveAvatarFile(userId: string, file: File): Promise<string
     const blob = await put(`avatars/${name}`, buf, {
       access: "public",
       addRandomSuffix: true,
-      contentType: file.type,
+      contentType: v.mime,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
     return blob.url;
@@ -97,7 +132,7 @@ export async function saveChallengeCoverFile(
   const v = validateImageFile(file, MAX_COVER_BYTES);
   if (!v.ok) throw new Error(v.error);
   const id = createId();
-  const ext = extForMime(file.type);
+  const ext = extForMime(v.mime);
   const name = `${challengeId}-${id}.${ext}`;
   const buf = Buffer.from(await file.arrayBuffer());
 
@@ -105,7 +140,7 @@ export async function saveChallengeCoverFile(
     const blob = await put(`challenges/${name}`, buf, {
       access: "public",
       addRandomSuffix: true,
-      contentType: file.type,
+      contentType: v.mime,
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
     return blob.url;
