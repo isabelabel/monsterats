@@ -26,6 +26,46 @@ import {
 } from "@/lib/scoring/types";
 import { saveCheckinPhoto, unlinkCheckinPhotoByUrl } from "@/lib/uploads";
 
+const WORKOUT_TIME_RE = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+
+function hmToMinutes(hm: string): number {
+  const [h, m] = hm.split(":").map((x) => Number(x));
+  return h * 60 + m;
+}
+
+function parseOptionalWorkoutTimes(
+  startRaw: unknown,
+  endRaw: unknown,
+):
+  | { ok: true; start: string | null; end: string | null }
+  | { ok: false; error: string } {
+  const start = String(startRaw ?? "").trim();
+  const end = String(endRaw ?? "").trim();
+  if (!start && !end) return { ok: true, start: null, end: null };
+  if (!start || !end) {
+    return {
+      ok: false,
+      error: "Add both workout start and end time, or leave both blank.",
+    };
+  }
+  if (!WORKOUT_TIME_RE.test(start) || !WORKOUT_TIME_RE.test(end)) {
+    return { ok: false, error: "Invalid workout time." };
+  }
+  const pad = (hm: string) => {
+    const [h, m] = hm.split(":");
+    return `${h!.padStart(2, "0")}:${m!}`;
+  };
+  const startN = pad(start);
+  const endN = pad(end);
+  if (hmToMinutes(endN) <= hmToMinutes(startN)) {
+    return {
+      ok: false,
+      error: "Workout end time must be after start time.",
+    };
+  }
+  return { ok: true, start: startN, end: endN };
+}
+
 async function runCreateCheckIn(
   challengeId: string,
   formData: FormData,
@@ -63,6 +103,11 @@ async function runCreateCheckIn(
       : Number(elevationRaw);
   const description = String(formData.get("description") ?? "").trim() || null;
   const photo = formData.get("photo");
+  const workoutTimes = parseOptionalWorkoutTimes(
+    formData.get("workoutStartTime"),
+    formData.get("workoutEndTime"),
+  );
+  if (!workoutTimes.ok) return { error: workoutTimes.error };
 
   if (!activityType) return { error: "Pick an activity." };
   if (activityType.length > 120) {
@@ -184,6 +229,8 @@ async function runCreateCheckIn(
     elevationM: elevationM ?? null,
     photoUrl,
     description,
+    workoutStartTime: workoutTimes.start,
+    workoutEndTime: workoutTimes.end,
     pointsEarned: scored.points,
   });
 

@@ -14,6 +14,19 @@ import type { ScoringRules } from "@/lib/scoring/types";
 /** Select value for “activity not in the list”. */
 export const OTHER_ACTIVITY_VALUE = "__monsterats_other__";
 
+function workoutTimesStepOk(start: string, end: string): boolean {
+  if (!start && !end) return true;
+  if (!start || !end) return false;
+  const toMin = (hm: string) => {
+    const [h, m] = hm.split(":").map((x) => Number(x));
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return NaN;
+    return h * 60 + m;
+  };
+  const a = toMin(start);
+  const b = toMin(end);
+  return Number.isFinite(a) && Number.isFinite(b) && b > a;
+}
+
 export function CheckInWizard({
   challengeId,
   scoringRules,
@@ -37,6 +50,8 @@ export function CheckInWizard({
   const [distanceKm, setDistanceKm] = useState("");
   const [elevationM, setElevationM] = useState("");
   const [description, setDescription] = useState("");
+  const [workoutStartTime, setWorkoutStartTime] = useState("");
+  const [workoutEndTime, setWorkoutEndTime] = useState("");
 
   const resolvedActivityType = useMemo(() => {
     if (activityChoice === OTHER_ACTIVITY_VALUE) {
@@ -66,7 +81,8 @@ export function CheckInWizard({
     durationMin >= 1 &&
     (!needsDistance ||
       (distanceKm !== "" && !Number.isNaN(Number(distanceKm)))) &&
-    elevOk;
+    elevOk &&
+    workoutTimesStepOk(workoutStartTime, workoutEndTime);
 
   const selectedListedRule =
     activityChoice !== OTHER_ACTIVITY_VALUE
@@ -242,6 +258,34 @@ export function CheckInWizard({
               />
             </label>
           )}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-muted mb-2 block text-sm font-medium">
+                Start time (optional)
+              </span>
+              <input
+                type="time"
+                className="ui-input w-full tabular-nums"
+                value={workoutStartTime}
+                onChange={(e) => setWorkoutStartTime(e.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="text-muted mb-2 block text-sm font-medium">
+                End time (optional)
+              </span>
+              <input
+                type="time"
+                className="ui-input w-full tabular-nums"
+                value={workoutEndTime}
+                onChange={(e) => setWorkoutEndTime(e.target.value)}
+              />
+            </label>
+          </div>
+          <p className="text-muted -mt-2 text-xs leading-relaxed">
+            Your device&apos;s local time. Leave both empty if you only want to log
+            duration.
+          </p>
           <label className="block">
             <span className="text-muted mb-2 block text-sm font-medium">
               Notes (optional)
@@ -305,6 +349,8 @@ export function CheckInWizard({
             }
           />
           <input type="hidden" name="description" value={description} />
+          <input type="hidden" name="workoutStartTime" value={workoutStartTime} />
+          <input type="hidden" name="workoutEndTime" value={workoutEndTime} />
           {state?.error && (
             <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {state.error}

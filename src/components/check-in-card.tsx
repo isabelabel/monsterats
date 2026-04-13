@@ -9,6 +9,18 @@ import { UserAvatar } from "@/components/user-avatar";
 
 const EMOJIS = ["💪", "🔥", "👏", "❤️", "🎉"] as const;
 
+function formatWorkoutHm(hm: string): string {
+  const [hRaw, mRaw] = hm.split(":");
+  const h = Number(hRaw);
+  const m = Number(mRaw);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hm;
+  const d = new Date(2000, 0, 1, h, m);
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export type CheckInCardProps = {
   id: string;
   activityType: string;
@@ -18,6 +30,8 @@ export type CheckInCardProps = {
   pointsEarned: number;
   photoUrl: string;
   description: string | null;
+  workoutStartTime?: string | null;
+  workoutEndTime?: string | null;
   createdAt: string;
   user: { id: string; name: string; image: string | null };
   reactions: { emoji: string; userId: string }[];
@@ -134,6 +148,13 @@ export function CheckInCard(props: CheckInCardProps) {
             </span>
           </div>
           <p className="text-muted mt-2 text-sm">
+            {props.workoutStartTime && props.workoutEndTime && (
+              <>
+                {formatWorkoutHm(props.workoutStartTime)}–
+                {formatWorkoutHm(props.workoutEndTime)}
+                {" · "}
+              </>
+            )}
             {props.durationMin} min
             {props.distanceKm != null && ` · ${props.distanceKm} km`}
             {props.elevationM != null &&

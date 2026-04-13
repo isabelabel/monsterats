@@ -74,6 +74,8 @@ export default async function ChallengeFeedPage({
               pointsEarned={row.pointsEarned}
               photoUrl={row.photoUrl}
               description={row.description}
+              workoutStartTime={row.workoutStartTime}
+              workoutEndTime={row.workoutEndTime}
               createdAt={new Date(row.createdAt).toISOString()}
               user={{
                 id: row.user.id,

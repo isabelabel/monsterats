@@ -81,6 +81,9 @@ export const checkIns = sqliteTable(
     elevationM: real("elevation_m"),
     photoUrl: text("photo_url").notNull(),
     description: text("description"),
+    /** Local wall times from the check-in form (`HH:mm`), optional. */
+    workoutStartTime: text("workout_start_time"),
+    workoutEndTime: text("workout_end_time"),
     pointsEarned: real("points_earned").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .defaultNow()
