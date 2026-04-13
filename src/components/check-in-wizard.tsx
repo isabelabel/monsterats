@@ -2,6 +2,10 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { createCheckInFormAction } from "@/app/actions/checkins";
+import {
+  reencodeImageForUpload,
+  shouldReencodeImageForUpload,
+} from "@/lib/reencode-image-for-upload";
 import { formatActivityRuleDetail } from "@/lib/scoring/describe-rule";
 import { DEFAULT_OTHER_ACTIVITY_POINTS, scoreCheckIn } from "@/lib/scoring/engine";
 import {
@@ -52,6 +56,8 @@ export function CheckInWizard({
   const [description, setDescription] = useState("");
   const [workoutStartTime, setWorkoutStartTime] = useState("");
   const [workoutEndTime, setWorkoutEndTime] = useState("");
+  const [prepareError, setPrepareError] = useState<string | undefined>();
+  const [optimizingPhoto, setOptimizingPhoto] = useState(false);
 
   const resolvedActivityType = useMemo(() => {
     if (activityChoice === OTHER_ACTIVITY_VALUE) {
@@ -330,7 +336,34 @@ export function CheckInWizard({
       )}
 
       {step === 2 && (
-        <form action={submitAction} className="ui-surface space-y-5 p-6">
+        <form
+          action={submitAction}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setPrepareError(undefined);
+            const form = e.currentTarget;
+            const fd = new FormData(form);
+            const photo = fd.get("photo");
+            if (photo instanceof File && photo.size > 0) {
+              if (shouldReencodeImageForUpload(photo)) {
+                setOptimizingPhoto(true);
+                try {
+                  const jpeg = await reencodeImageForUpload(photo);
+                  fd.set("photo", jpeg);
+                } catch {
+                  setPrepareError(
+                    "Could not read this photo on your device. Try another picture, or export as JPEG (iPhone: Settings → Camera → Formats → Most Compatible).",
+                  );
+                  return;
+                } finally {
+                  setOptimizingPhoto(false);
+                }
+              }
+            }
+            submitAction(fd);
+          }}
+          className="ui-surface space-y-5 p-6"
+        >
           <input type="hidden" name="challengeId" value={challengeId} />
           <input type="hidden" name="activityType" value={resolvedActivityType} />
           <input type="hidden" name="durationMin" value={String(durationMin)} />
@@ -351,9 +384,9 @@ export function CheckInWizard({
           <input type="hidden" name="description" value={description} />
           <input type="hidden" name="workoutStartTime" value={workoutStartTime} />
           <input type="hidden" name="workoutEndTime" value={workoutEndTime} />
-          {state?.error && (
+          {(state?.error || prepareError) && (
             <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              {state.error}
+              {prepareError ?? state?.error}
             </p>
           )}
           <label className="block">
@@ -378,10 +411,14 @@ export function CheckInWizard({
             </button>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || optimizingPhoto}
               className="ui-btn-primary flex-1 disabled:opacity-50"
             >
-              {pending ? "Submitting…" : "Submit check-in"}
+              {pending
+                ? "Submitting…"
+                : optimizingPhoto
+                  ? "Preparing photo…"
+                  : "Submit check-in"}
             </button>
           </div>
         </form>
