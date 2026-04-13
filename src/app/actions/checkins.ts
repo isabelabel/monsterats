@@ -15,10 +15,15 @@ import { getChallengeStatus } from "@/lib/challenges/status";
 import { requireSession } from "@/lib/session";
 import {
   DEFAULT_OTHER_ACTIVITY_POINTS,
+  type ScoreCheckInOptions,
   scoreCheckIn,
 } from "@/lib/scoring/engine";
 import { activityAllowsElevation } from "@/lib/scoring/activity-meta";
-import { findRuleByName, parseScoringRules } from "@/lib/scoring/types";
+import {
+  countHighIntensityCheckIns,
+  findRuleByName,
+  parseScoringRules,
+} from "@/lib/scoring/types";
 import { saveCheckinPhoto, unlinkCheckinPhotoByUrl } from "@/lib/uploads";
 
 async function runCreateCheckIn(
@@ -89,36 +94,12 @@ async function runCreateCheckIn(
     };
   }
 
-  if (!(photo instanceof File) || photo.size === 0) {
-    return { error: "Photo proof is required." };
-  }
-
   let rules;
   try {
     rules = parseScoringRules(ch.scoringRules);
   } catch {
     return { error: "Challenge scoring rules are invalid." };
   }
-
-  const listed = findRuleByName(rules, activityType);
-  if (!listed && activityType.trim().length < 2) {
-    return {
-      error: "For “Other”, type a short activity name (at least 2 characters).",
-    };
-  }
-  const scoreOpts =
-    elevationM != null &&
-    Number.isFinite(elevationM) &&
-    elevationM > 0 &&
-    activityAllowsElevation(activityType)
-      ? { elevationM }
-      : undefined;
-  const scored = listed
-    ? scoreCheckIn(rules, activityType, durationMin, distanceKm, scoreOpts)
-    : scoreCheckIn(rules, activityType, durationMin, null, {
-        defaultPointsIfUnknown: DEFAULT_OTHER_ACTIVITY_POINTS,
-      });
-  if (!scored.ok) return { error: scored.error };
 
   const now = new Date();
   const tz = ch.timezone;
@@ -154,14 +135,43 @@ async function runCreateCheckIn(
     }
   }
 
-  let photoName: string;
+  const priorHighIntensityCheckInsToday = countHighIntensityCheckIns(
+    rules,
+    todayCheckIns,
+  );
+
+  if (!(photo instanceof File) || photo.size === 0) {
+    return { error: "Photo proof is required." };
+  }
+
+  const listed = findRuleByName(rules, activityType);
+  if (!listed && activityType.trim().length < 2) {
+    return {
+      error: "For “Other”, type a short activity name (at least 2 characters).",
+    };
+  }
+  const scoreOpts: ScoreCheckInOptions = {
+    ...(elevationM != null &&
+    Number.isFinite(elevationM) &&
+    elevationM > 0 &&
+    activityAllowsElevation(activityType)
+      ? { elevationM }
+      : {}),
+    priorHighIntensityCheckInsToday,
+  };
+  const scored = listed
+    ? scoreCheckIn(rules, activityType, durationMin, distanceKm, scoreOpts)
+    : scoreCheckIn(rules, activityType, durationMin, null, {
+        defaultPointsIfUnknown: DEFAULT_OTHER_ACTIVITY_POINTS,
+      });
+  if (!scored.ok) return { error: scored.error };
+
+  let photoUrl: string;
   try {
-    photoName = await saveCheckinPhoto(photo);
+    photoUrl = await saveCheckinPhoto(photo);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Photo upload failed." };
   }
-
-  const photoUrl = `/api/media/checkins/${photoName}`;
   const id = createId();
 
   await db.insert(checkIns).values({

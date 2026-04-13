@@ -17,9 +17,12 @@ export const OTHER_ACTIVITY_VALUE = "__monsterats_other__";
 export function CheckInWizard({
   challengeId,
   scoringRules,
+  priorHighIntensityCheckInsToday,
 }: {
   challengeId: string;
   scoringRules: ScoringRules;
+  /** Already logged today (challenge TZ); used for high-intensity bonus preview. */
+  priorHighIntensityCheckInsToday: number;
 }) {
   const [state, submitAction, pending] = useActionState(
     createCheckInFormAction,
@@ -89,6 +92,7 @@ export function CheckInWizard({
       {
         elevationM: elevForScore,
         defaultPointsIfUnknown: DEFAULT_OTHER_ACTIVITY_POINTS,
+        priorHighIntensityCheckInsToday,
       },
     );
   }, [
@@ -101,6 +105,7 @@ export function CheckInWizard({
     elevationM,
     elevNum,
     elevOk,
+    priorHighIntensityCheckInsToday,
   ]);
 
   return (

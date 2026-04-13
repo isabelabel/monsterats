@@ -15,11 +15,44 @@ const elevationBonusBracketSchema = z.object({
   bonus: z.number(),
 });
 
-const fixedRuleSchema = z.object({
-  name: z.string().min(1),
-  mode: z.literal("fixed"),
-  points: z.number(),
-});
+const fixedRuleSchema = z
+  .object({
+    name: z.string().min(1),
+    mode: z.literal("fixed"),
+    points: z.number(),
+    high_intensity: z.boolean().optional(),
+    min_duration_for_bonus_min: z.number().positive().optional(),
+    fallback_points: z.number().optional(),
+  })
+  .superRefine((r, ctx) => {
+    if (r.high_intensity) {
+      if (r.min_duration_for_bonus_min == null) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "high_intensity activities require min_duration_for_bonus_min",
+          path: ["min_duration_for_bonus_min"],
+        });
+      }
+      if (r.fallback_points == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "high_intensity activities require fallback_points",
+          path: ["fallback_points"],
+        });
+      }
+    } else if (
+      r.min_duration_for_bonus_min != null ||
+      r.fallback_points != null
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "min_duration_for_bonus_min and fallback_points are only valid with high_intensity: true",
+        path: ["high_intensity"],
+      });
+    }
+  });
 
 const durationScaledRuleSchema = z.object({
   name: z.string().min(1),
@@ -68,4 +101,21 @@ export function findRuleByName(
   activityName: string,
 ): ActivityRule | undefined {
   return rules.find((r) => r.name === activityName);
+}
+
+export function isHighIntensityFixedActivity(
+  rules: ScoringRules,
+  activityType: string,
+): boolean {
+  const r = findRuleByName(rules, activityType);
+  return r?.mode === "fixed" && r.high_intensity === true;
+}
+
+/** How many check-ins use a high_intensity fixed activity (for one-per-day caps). */
+export function countHighIntensityCheckIns(
+  rules: ScoringRules,
+  rows: { activityType: string }[],
+): number {
+  return rows.filter((c) => isHighIntensityFixedActivity(rules, c.activityType))
+    .length;
 }

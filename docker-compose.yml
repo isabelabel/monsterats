@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: monsterats
+    volumes:
+      - monsterats_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d monsterats"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  # Full stack for a VPS or LAN demo: docker compose --profile prod up -d --build
+  # (Default `docker compose up -d` still only starts Postgres for local npm run dev.)
+  web:
+    profiles: ["prod"]
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/monsterats
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in a root .env file (see DEPLOY.md)}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?Set BETTER_AUTH_URL in .env}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?Set NEXT_PUBLIC_APP_URL in .env}
+      BLOB_READ_WRITE_TOKEN: ${BLOB_READ_WRITE_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - monsterats_uploads:/app/data/uploads
+
+volumes:
+  monsterats_pg:
+  monsterats_uploads:

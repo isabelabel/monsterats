@@ -1,19 +1,20 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import fs from "node:fs";
-import path from "node:path";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
-const dbPath = process.env.DATABASE_PATH
-  ? path.isAbsolute(process.env.DATABASE_PATH)
-    ? process.env.DATABASE_PATH
-    : path.join(process.cwd(), process.env.DATABASE_PATH)
-  : path.join(process.cwd(), "data", "monsterats.db");
+const databaseUrl = process.env.DATABASE_URL;
 
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+if (!databaseUrl) {
+  throw new Error(
+    "DATABASE_URL is not set. Add it to .env.local (see .env.example). For local dev, run Postgres via docker compose.",
+  );
+}
 
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
+const client = postgres(databaseUrl, {
+  max: 1,
+  prepare: false,
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
 
-export const db = drizzle(sqlite, { schema });
-export { sqlite };
+export const db = drizzle(client, { schema });

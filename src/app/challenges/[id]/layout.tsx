@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { challengeMemberships, challenges } from "@/db/schema";
 import { getChallengeStatus } from "@/lib/challenges/status";
 import { loadChallengeLeaderboardRows } from "@/lib/load-challenge-leaderboard";
+import { resolveChallengeCoverUrl } from "@/lib/media-url";
 import { parseScoringRules, type ScoringRules } from "@/lib/scoring/types";
 import { getSession } from "@/lib/session";
 
@@ -66,9 +67,7 @@ export default async function ChallengeLayout({
       }
     : leader;
 
-  const coverUrl = ch.coverImageFile
-    ? `/api/media/challenges/${ch.coverImageFile}`
-    : null;
+  const coverUrl = resolveChallengeCoverUrl(ch.coverImageFile);
 
   let scoringRules: ScoringRules | null = null;
   try {

@@ -6,6 +6,7 @@ import { updateChallengeFormAction } from "@/app/actions/challenges";
 import { challenges } from "@/db/schema";
 import { challengeImportSchema } from "@/lib/challenge-template";
 import { toDatetimeLocalValue } from "@/lib/datetime-form";
+import { resolveChallengeCoverUrl } from "@/lib/media-url";
 import { parseScoringRules } from "@/lib/scoring/types";
 
 type Challenge = InferSelectModel<typeof challenges>;
@@ -82,9 +83,7 @@ export function EditChallengeForm({ challenge }: { challenge: Challenge }) {
     }
   }, [importPaste]);
 
-  const coverPreview = challenge.coverImageFile
-    ? `/api/media/challenges/${challenge.coverImageFile}`
-    : null;
+  const coverPreview = resolveChallengeCoverUrl(challenge.coverImageFile);
 
   return (
     <form

@@ -19,24 +19,34 @@ const rules = parseScoringRules(fixture.activities);
 
 describe("scoreCheckIn", () => {
   it("parses NuCel fixture", () => {
-    expect(rules.length).toBe(29);
+    expect(rules.length).toBe(20);
   });
 
   it("activityAllowsElevation only for outdoor walk / run / bike", () => {
     expect(activityAllowsElevation("Caminhada")).toBe(true);
     expect(activityAllowsElevation("Corrida (rua)")).toBe(true);
-    expect(activityAllowsElevation("Bike")).toBe(true);
     expect(activityAllowsElevation("Ciclismo (ao ar livre)")).toBe(true);
     expect(activityAllowsElevation("Corrida na esteira")).toBe(false);
     expect(activityAllowsElevation("Bike indoor")).toBe(false);
-    expect(activityAllowsElevation("Spinning")).toBe(false);
-    expect(activityAllowsElevation("Remo")).toBe(false);
+    expect(activityAllowsElevation("Musculação")).toBe(false);
     expect(activityAllowsElevation("Hyrox")).toBe(false);
   });
 
-  it("fixed CrossFit", () => {
+  it("fixed CrossFit bonus when long enough and first HI of day", () => {
     const r = scoreCheckIn(rules, "CrossFit", 45, null);
     expect(r).toEqual({ ok: true, points: 1.5 });
+  });
+
+  it("fixed CrossFit fallback when under min duration for bonus", () => {
+    const r = scoreCheckIn(rules, "CrossFit", 44, null);
+    expect(r).toEqual({ ok: true, points: 1.0 });
+  });
+
+  it("fixed CrossFit fallback when second high-intensity check-in that day", () => {
+    const r = scoreCheckIn(rules, "CrossFit", 60, null, {
+      priorHighIntensityCheckInsToday: 1,
+    });
+    expect(r).toEqual({ ok: true, points: 1.0 });
   });
 
   it("duration_scaled Yoga 30m", () => {

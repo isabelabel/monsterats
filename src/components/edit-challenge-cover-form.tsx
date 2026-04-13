@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { InferSelectModel } from "drizzle-orm";
 import { updateChallengeCoverFormAction } from "@/app/actions/challenges";
 import { challenges } from "@/db/schema";
+import { resolveChallengeCoverUrl } from "@/lib/media-url";
 
 type Challenge = InferSelectModel<typeof challenges>;
 
@@ -13,9 +14,7 @@ export function EditChallengeCoverForm({ challenge }: { challenge: Challenge }) 
     undefined,
   );
 
-  const coverPreview = challenge.coverImageFile
-    ? `/api/media/challenges/${challenge.coverImageFile}`
-    : null;
+  const coverPreview = resolveChallengeCoverUrl(challenge.coverImageFile);
 
   return (
     <form

@@ -2,6 +2,19 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Requires **PostgreSQL**. Quick local setup:
+
+```bash
+docker compose up -d
+cp .env.example .env.local
+npm run db:push
+npm run dev
+```
+
+See **[DEPLOY.md](./DEPLOY.md)** for production hosting (Vercel, Neon, Blob, env vars).
+
+---
+
 First, run the development server:
 
 ```bash

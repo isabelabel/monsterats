@@ -1,10 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { CheckInWizard } from "@/components/check-in-wizard";
 import { db } from "@/db";
-import { challenges } from "@/db/schema";
+import { challenges, checkIns } from "@/db/schema";
+import { dateKeyInTimezone } from "@/lib/dates";
 import { getChallengeStatus } from "@/lib/challenges/status";
-import { parseScoringRules } from "@/lib/scoring/types";
+import { countHighIntensityCheckIns, parseScoringRules } from "@/lib/scoring/types";
+import { getSession } from "@/lib/session";
 
 export default async function CheckInPage({
   params,
@@ -42,6 +44,26 @@ export default async function CheckInPage({
     );
   }
 
+  const session = await getSession();
+  const now = new Date();
+  const todayKey = dateKeyInTimezone(now, ch.timezone);
+  const priorHighIntensityCheckInsToday =
+    session == null
+      ? 0
+      : countHighIntensityCheckIns(
+          rules,
+          (
+            await db.query.checkIns.findMany({
+              where: and(
+                eq(checkIns.challengeId, id),
+                eq(checkIns.userId, session.user.id),
+              ),
+            })
+          ).filter(
+            (c) => dateKeyInTimezone(new Date(c.createdAt), ch.timezone) === todayKey,
+          ),
+        );
+
   return (
     <div>
       <div className="px-4 pt-5">
@@ -55,7 +77,11 @@ export default async function CheckInPage({
           </p>
         </div>
       </div>
-      <CheckInWizard challengeId={id} scoringRules={rules} />
+      <CheckInWizard
+        challengeId={id}
+        scoringRules={rules}
+        priorHighIntensityCheckInsToday={priorHighIntensityCheckInsToday}
+      />
     </div>
   );
 }

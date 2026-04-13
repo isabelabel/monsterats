@@ -10,8 +10,12 @@ function fmtNum(n: number): string {
  */
 export function formatActivityRuleShort(rule: ActivityRule): string {
   switch (rule.mode) {
-    case "fixed":
+    case "fixed": {
+      if (rule.high_intensity) {
+        return `${fmtNum(rule.points)} pt (≥${fmtNum(rule.min_duration_for_bonus_min!)} min, 1/day) / ${fmtNum(rule.fallback_points!)} pt`;
+      }
       return `${fmtNum(rule.points)} pt per check-in`;
+    }
     case "duration_scaled": {
       const sorted = [...rule.brackets].sort((a, b) => a.up_to_min - b.up_to_min);
       const lo = sorted[0]!;
@@ -42,8 +46,20 @@ export function formatActivityRuleShort(rule: ActivityRule): string {
  */
 export function formatActivityRuleDetail(rule: ActivityRule): string[] {
   switch (rule.mode) {
-    case "fixed":
-      return [`Always ${fmtNum(rule.points)} points per check-in (duration does not change the score).`];
+    case "fixed": {
+      if (rule.high_intensity) {
+        const minB = rule.min_duration_for_bonus_min!;
+        const fb = rule.fallback_points!;
+        return [
+          `High-intensity: full ${fmtNum(rule.points)} points only if duration is at least ${fmtNum(minB)} minutes and this is your first high-intensity check-in that calendar day.`,
+          `Otherwise you earn ${fmtNum(fb)} points (same as a standard fixed activity).`,
+          `Only one high-intensity bonus per day; a second high-intensity workout that day always uses ${fmtNum(fb)} points.`,
+        ];
+      }
+      return [
+        `Always ${fmtNum(rule.points)} points per check-in (duration does not change the score).`,
+      ];
+    }
 
     case "duration_scaled": {
       const brackets = [...rule.brackets].sort((a, b) => a.up_to_min - b.up_to_min);

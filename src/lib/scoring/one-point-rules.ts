@@ -7,6 +7,9 @@ import type { ActivityRule } from "./types";
 export function isAlwaysOnePointActivityRule(rule: ActivityRule): boolean {
   switch (rule.mode) {
     case "fixed":
+      if (rule.high_intensity) {
+        return rule.points === 1 && rule.fallback_points === 1;
+      }
       return rule.points === 1;
     case "duration_scaled":
       return (

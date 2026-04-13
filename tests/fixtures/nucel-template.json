@@ -13,8 +13,38 @@
     { "name": "Esportes coletivos", "mode": "fixed", "points": 1.0 },
     { "name": "Dança", "mode": "fixed", "points": 1.0 },
     { "name": "Tênis / Padel / Beach Tennis", "mode": "fixed", "points": 1.0 },
-    { "name": "CrossFit", "mode": "fixed", "points": 1.5 },
-    { "name": "Orange Zone", "mode": "fixed", "points": 1.3 },
+    {
+      "name": "CrossFit",
+      "mode": "fixed",
+      "points": 1.5,
+      "high_intensity": true,
+      "min_duration_for_bonus_min": 45,
+      "fallback_points": 1.0
+    },
+    {
+      "name": "Hyrox",
+      "mode": "fixed",
+      "points": 1.4,
+      "high_intensity": true,
+      "min_duration_for_bonus_min": 45,
+      "fallback_points": 1.0
+    },
+    {
+      "name": "Orange Zone",
+      "mode": "fixed",
+      "points": 1.4,
+      "high_intensity": true,
+      "min_duration_for_bonus_min": 45,
+      "fallback_points": 1.0
+    },
+    {
+      "name": "HIT de alta intensidade",
+      "mode": "fixed",
+      "points": 1.4,
+      "high_intensity": true,
+      "min_duration_for_bonus_min": 45,
+      "fallback_points": 1.0
+    },
     {
       "name": "Pilates",
       "mode": "duration_scaled",
@@ -48,8 +78,9 @@
         { "up_to_km": 7, "points": 1.0 },
         { "up_to_km": 10, "points": 1.3 },
         { "up_to_km": 15, "points": 1.6 },
-        { "up_to_km": 21, "points": 2.0 },
-        { "up_to_km": 99, "points": 2.5 }
+        { "up_to_km": 21.1, "points": 2.0 },
+        { "up_to_km": 42, "points": 2.5 },
+        { "up_to_km": 999, "points": 3.0 }
       ],
       "elevation_bonus": [
         { "up_to_m": 50, "bonus": 0.0 },
@@ -81,8 +112,28 @@
         { "up_to_m": 99999, "bonus": 0.7 }
       ]
     },
-    { "name": "Caminhada", "mode": "fixed", "points": 0.7 },
-    { "name": "Esteira (caminhada)", "mode": "fixed", "points": 0.7 },
+    {
+      "name": "Caminhada",
+      "mode": "duration_scaled",
+      "brackets": [
+        { "up_to_min": 30, "points": 0.7 },
+        { "up_to_min": 60, "points": 0.9 },
+        { "up_to_min": 90, "points": 1.1 },
+        { "up_to_min": 120, "points": 1.3 }
+      ],
+      "extra_per_30min": 0.2
+    },
+    {
+      "name": "Esteira (caminhada)",
+      "mode": "duration_scaled",
+      "brackets": [
+        { "up_to_min": 30, "points": 0.7 },
+        { "up_to_min": 60, "points": 0.9 },
+        { "up_to_min": 90, "points": 1.1 },
+        { "up_to_min": 120, "points": 1.3 }
+      ],
+      "extra_per_30min": 0.2
+    },
     {
       "name": "Corrida na esteira",
       "mode": "conversion",
@@ -110,17 +161,6 @@
       "min_distance_km": 5.2,
       "threshold_points": 1.0,
       "below_threshold_points": 0.7
-    },
-    { "name": "Bike", "mode": "fixed", "points": 1.0 },
-    { "name": "Futevolei", "mode": "fixed", "points": 1.0 },
-    { "name": "Tenis", "mode": "fixed", "points": 1.0 },
-    { "name": "Basquete", "mode": "fixed", "points": 1.0 },
-    { "name": "Remo", "mode": "fixed", "points": 1.0 },
-    { "name": "Remo indoor", "mode": "fixed", "points": 1.0 },
-    { "name": "Nataçao", "mode": "fixed", "points": 1.0 },
-    { "name": "Fit Dance", "mode": "fixed", "points": 1.0 },
-    { "name": "Muay Thai", "mode": "fixed", "points": 1.0 },
-    { "name": "Hyrox", "mode": "fixed", "points": 1.5 },
-    { "name": "Spinning", "mode": "fixed", "points": 1.0 }
+    }
   ]
 }

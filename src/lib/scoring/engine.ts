@@ -111,7 +111,31 @@ export type ScoreCheckInOptions = {
   defaultPointsIfUnknown?: number;
   /** Elevation gain in meters (optional); used with `elevation_bonus` on distance_scaled rules. */
   elevationM?: number | null;
+  /**
+   * High-intensity fixed activities: how many such check-ins the user already logged
+   * today (same calendar day in the challenge timezone). The next one is 2nd+ → bonus cap.
+   */
+  priorHighIntensityCheckInsToday?: number;
 };
+
+function fixedPointsWithHighIntensity(
+  rule: Extract<ActivityRule, { mode: "fixed" }>,
+  durationMin: number,
+  priorHighIntensityToday: number,
+): number {
+  if (!rule.high_intensity) {
+    return rule.points;
+  }
+  const minBonus = rule.min_duration_for_bonus_min!;
+  const fallback = rule.fallback_points!;
+  if (durationMin < minBonus) {
+    return fallback;
+  }
+  if (priorHighIntensityToday >= 1) {
+    return fallback;
+  }
+  return rule.points;
+}
 
 export function scoreCheckIn(
   rules: ScoringRules,
@@ -130,8 +154,11 @@ export function scoreCheckIn(
   }
 
   switch (rule.mode) {
-    case "fixed":
-      return { ok: true, points: rule.points };
+    case "fixed": {
+      const prior = opts?.priorHighIntensityCheckInsToday ?? 0;
+      const points = fixedPointsWithHighIntensity(rule, durationMin, prior);
+      return { ok: true, points };
+    }
     case "duration_scaled":
       return { ok: true, points: durationScaled(rule, durationMin) };
     case "distance_scaled": {
