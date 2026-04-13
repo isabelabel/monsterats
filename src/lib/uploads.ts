@@ -22,12 +22,54 @@ function inferMimeFromFileName(fileName: string): string | null {
 
 /**
  * Normalizes MIME (e.g. image/jpg → jpeg), infers when missing, rejects HEIC (poor web support).
+ * Many mobile browsers send `application/octet-stream` — treat as unknown so we can sniff bytes.
  */
 export function resolveImageMime(file: File): string {
   let t = file.type?.trim().toLowerCase() || "";
   if (t === "image/jpg" || t === "image/pjpeg") t = "image/jpeg";
+  if (t === "application/octet-stream" || t === "binary/octet-stream") {
+    t = "";
+  }
   if (!t) t = inferMimeFromFileName(file.name) ?? "";
   return t;
+}
+
+/** First bytes when `type` / filename are useless (common on phones). */
+function sniffImageMimeFromBytes(b: Uint8Array): string | null {
+  if (b.length < 12) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
+    return "image/png";
+  }
+  if (
+    b[0] === 0x52 &&
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x46 &&
+    b[8] === 0x57 &&
+    b[9] === 0x45 &&
+    b[10] === 0x42 &&
+    b[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  // ISO BMFF (`ftyp`); HEIC/HEIF family
+  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    const brand = String.fromCharCode(b[8], b[9], b[10], b[11]).toLowerCase();
+    if (
+      brand === "heic" ||
+      brand === "heix" ||
+      brand === "hevc" ||
+      brand === "heim" ||
+      brand === "heis" ||
+      brand === "hevm" ||
+      brand === "mif1" ||
+      brand === "msf1"
+    ) {
+      return "image/heic";
+    }
+  }
+  return null;
 }
 
 function blobStorageEnabled(): boolean {
@@ -46,10 +88,10 @@ export function extForMime(mime: string): string {
   return "jpg";
 }
 
-export function validateImageFile(
+export async function validateImageFile(
   file: File,
   maxBytes: number = MAX_BYTES,
-): { ok: true; mime: string } | { ok: false; error: string } {
+): Promise<{ ok: true; mime: string } | { ok: false; error: string }> {
   const t = resolveImageMime(file);
   if (t === "image/heic" || t === "image/heif") {
     return {
@@ -58,8 +100,21 @@ export function validateImageFile(
         "HEIC/HEIF isn’t supported in the browser. On iPhone: Settings → Camera → Formats → Most Compatible, or pick a photo exported as JPEG/PNG.",
     };
   }
-  if (!ALLOWED.has(t)) {
-    if (!t) {
+  let mime = t;
+  if (!ALLOWED.has(mime)) {
+    const head = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+    const sniffed = sniffImageMimeFromBytes(head);
+    if (sniffed === "image/heic" || sniffed === "image/heif") {
+      return {
+        ok: false,
+        error:
+          "HEIC/HEIF isn’t supported in the browser. On iPhone: Settings → Camera → Formats → Most Compatible, or pick a photo exported as JPEG/PNG.",
+      };
+    }
+    if (sniffed && ALLOWED.has(sniffed)) mime = sniffed;
+  }
+  if (!ALLOWED.has(mime)) {
+    if (!mime) {
       return {
         ok: false,
         error:
@@ -72,12 +127,12 @@ export function validateImageFile(
     const mb = Math.round(maxBytes / (1024 * 1024));
     return { ok: false, error: `Image must be under ${mb}MB.` };
   }
-  return { ok: true, mime: t };
+  return { ok: true, mime };
 }
 
 /** Public URL for <img src> — either Blob https URL or `/api/media/...`. */
 export async function saveCheckinPhoto(file: File): Promise<string> {
-  const v = validateImageFile(file);
+  const v = await validateImageFile(file);
   if (!v.ok) throw new Error(v.error);
   const id = createId();
   const ext = extForMime(v.mime);
@@ -101,7 +156,7 @@ export async function saveCheckinPhoto(file: File): Promise<string> {
 }
 
 export async function saveAvatarFile(userId: string, file: File): Promise<string> {
-  const v = validateImageFile(file);
+  const v = await validateImageFile(file);
   if (!v.ok) throw new Error(v.error);
   const id = createId();
   const ext = extForMime(v.mime);
@@ -129,7 +184,7 @@ export async function saveChallengeCoverFile(
   challengeId: string,
   file: File,
 ): Promise<string> {
-  const v = validateImageFile(file, MAX_COVER_BYTES);
+  const v = await validateImageFile(file, MAX_COVER_BYTES);
   if (!v.ok) throw new Error(v.error);
   const id = createId();
   const ext = extForMime(v.mime);

@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["./node_modules/@libsql/**/*", "./node_modules/libsql/**/*"],
   },
+  /** Default 1MB truncates phone camera uploads before they reach the server action. */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
+  },
   reactStrictMode: true,
   async headers() {
     return [
