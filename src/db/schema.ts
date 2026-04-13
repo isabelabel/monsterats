@@ -1,20 +1,18 @@
 import { relations } from "drizzle-orm";
 import {
-  doublePrecision,
   index,
   integer,
-  jsonb,
-  pgTable,
   primaryKey,
+  real,
+  sqliteTable,
   text,
-  timestamp,
   uniqueIndex,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 import { user, session, account, verification } from "./auth-schema";
 
 export { user, session, account, verification };
 
-export const challenges = pgTable(
+export const challenges = sqliteTable(
   "challenges",
   {
     id: text("id").primaryKey(),
@@ -22,30 +20,26 @@ export const challenges = pgTable(
     creatorId: text("creator_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    startDate: timestamp("start_date", { withTimezone: true, mode: "date" })
-      .notNull(),
-    endDate: timestamp("end_date", { withTimezone: true, mode: "date" })
-      .notNull(),
+    startDate: integer("start_date", { mode: "timestamp_ms" }).notNull(),
+    endDate: integer("end_date", { mode: "timestamp_ms" }).notNull(),
     inviteCode: text("invite_code").notNull().unique(),
     maxCheckinsPerDay: integer("max_checkins_per_day").notNull().default(2),
     minCheckinDurationMin: integer("min_checkin_duration_min")
       .notNull()
       .default(30),
     secondCheckinMinTotalMin: integer("second_checkin_min_total_min"),
-    scoringRules: jsonb("scoring_rules").$type<unknown[]>().notNull(),
-    rankingWeights: jsonb("ranking_weights")
+    scoringRules: text("scoring_rules", { mode: "json" })
+      .notNull()
+      .$type<unknown[]>(),
+    rankingWeights: text("ranking_weights", { mode: "json" })
       .notNull()
       .$type<{ points: number; consistency: number }>(),
     timezone: text("timezone").notNull().default("America/Sao_Paulo"),
-    /**
-     * Local: file name only, served at /api/media/challenges/{file}.
-     * Vercel Blob: full https URL.
-     */
     coverImageFile: text("cover_image_file"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
       .defaultNow()
       .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -53,7 +47,7 @@ export const challenges = pgTable(
   (t) => [index("challenges_creator_idx").on(t.creatorId)],
 );
 
-export const challengeMemberships = pgTable(
+export const challengeMemberships = sqliteTable(
   "challenge_memberships",
   {
     userId: text("user_id")
@@ -62,16 +56,16 @@ export const challengeMemberships = pgTable(
     challengeId: text("challenge_id")
       .notNull()
       .references(() => challenges.id, { onDelete: "cascade" }),
-    joinedAt: timestamp("joined_at", { withTimezone: true, mode: "date" })
+    joinedAt: integer("joined_at", { mode: "timestamp_ms" })
       .defaultNow()
       .notNull(),
   },
-  (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.challengeId] }),
-  }),
+  (t) => [
+    primaryKey({ columns: [t.userId, t.challengeId], name: "challenge_memberships_pk" }),
+  ],
 );
 
-export const checkIns = pgTable(
+export const checkIns = sqliteTable(
   "check_ins",
   {
     id: text("id").primaryKey(),
@@ -83,12 +77,12 @@ export const checkIns = pgTable(
       .references(() => challenges.id, { onDelete: "cascade" }),
     activityType: text("activity_type").notNull(),
     durationMin: integer("duration_min").notNull(),
-    distanceKm: doublePrecision("distance_km"),
-    elevationM: doublePrecision("elevation_m"),
+    distanceKm: real("distance_km"),
+    elevationM: real("elevation_m"),
     photoUrl: text("photo_url").notNull(),
     description: text("description"),
-    pointsEarned: doublePrecision("points_earned").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    pointsEarned: real("points_earned").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
       .defaultNow()
       .notNull(),
   },
@@ -98,7 +92,7 @@ export const checkIns = pgTable(
   ],
 );
 
-export const reactions = pgTable(
+export const reactions = sqliteTable(
   "reactions",
   {
     id: text("id").primaryKey(),
@@ -109,7 +103,7 @@ export const reactions = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     emoji: text("emoji").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
       .defaultNow()
       .notNull(),
   },
@@ -122,7 +116,7 @@ export const reactions = pgTable(
   ],
 );
 
-export const comments = pgTable(
+export const comments = sqliteTable(
   "comments",
   {
     id: text("id").primaryKey(),
@@ -133,7 +127,7 @@ export const comments = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     text: text("text").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
       .defaultNow()
       .notNull(),
   },

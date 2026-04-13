@@ -1,5 +1,5 @@
 # Production image (Next.js standalone). Build: docker build -t monsterats .
-# Requires DATABASE_URL and auth env at runtime (see DEPLOY.md).
+# Runtime: set TURSO_DATABASE_URL, TURSO_AUTH_TOKEN (remote Turso), auth URLs, etc. (see DEPLOY.md).
 
 FROM node:20-alpine AS deps
 WORKDIR /app
@@ -12,7 +12,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # `next build` loads server modules that require env; they are not used if no DB calls run during build.
-ENV DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/monsterats
+ENV TURSO_DATABASE_URL=file:/tmp/monsterats-build.db
+ENV TURSO_AUTH_TOKEN=
 ENV BETTER_AUTH_SECRET=build-placeholder-min-32-chars-long-ok
 ENV BETTER_AUTH_URL=http://localhost:3000
 ENV NEXT_PUBLIC_APP_URL=http://localhost:3000

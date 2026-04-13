@@ -33,18 +33,21 @@ function loadEnvFile(rel: string, override: boolean) {
 loadEnvFile(".env", false);
 loadEnvFile(".env.local", true);
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl?.trim()) {
+const url = process.env.TURSO_DATABASE_URL?.trim();
+const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
+
+if (!url) {
   throw new Error(
-    "DATABASE_URL is not set. Copy .env.example to .env.local, set DATABASE_URL, then run npm run db:push again.",
+    "TURSO_DATABASE_URL is not set. Copy .env.example to .env.local, set TURSO_DATABASE_URL, then run npm run db:push again.",
   );
 }
 
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dialect: "postgresql",
+  dialect: "turso",
   dbCredentials: {
-    url: databaseUrl,
+    url,
+    authToken: authToken ?? "",
   },
 });

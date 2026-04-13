@@ -1,20 +1,19 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-const databaseUrl = process.env.DATABASE_URL;
+const url = process.env.TURSO_DATABASE_URL?.trim();
+const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
 
-if (!databaseUrl) {
+if (!url) {
   throw new Error(
-    "DATABASE_URL is not set. Add it to .env.local (see .env.example). For local dev, run Postgres via docker compose.",
+    "TURSO_DATABASE_URL is not set. Copy .env.example to .env.local and add your Turso URL (see DEPLOY.md).",
   );
 }
 
-const client = postgres(databaseUrl, {
-  max: 1,
-  prepare: false,
-  idle_timeout: 20,
-  connect_timeout: 10,
+const client = createClient({
+  url,
+  authToken: authToken || undefined,
 });
 
 export const db = drizzle(client, { schema });

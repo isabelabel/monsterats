@@ -1,39 +1,22 @@
-services:
-  db:
-    image: postgres:16-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: monsterats
-    volumes:
-      - monsterats_pg:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d monsterats"]
-      interval: 3s
-      timeout: 5s
-      retries: 20
+# Optional Docker deployment: app only (database is Turso, not bundled).
+# 1. Put Turso + auth vars in a root `.env` (see .env.example and DEPLOY.md).
+# 2. docker compose --profile prod up -d --build
 
-  # Full stack for a VPS or LAN demo: docker compose --profile prod up -d --build
-  # (Default `docker compose up -d` still only starts Postgres for local npm run dev.)
+services:
   web:
     profiles: ["prod"]
     build: .
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/monsterats
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in a root .env file (see DEPLOY.md)}
+      TURSO_DATABASE_URL: ${TURSO_DATABASE_URL:?Set TURSO_DATABASE_URL in .env}
+      TURSO_AUTH_TOKEN: ${TURSO_AUTH_TOKEN:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?Set BETTER_AUTH_URL in .env}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?Set NEXT_PUBLIC_APP_URL in .env}
       BLOB_READ_WRITE_TOKEN: ${BLOB_READ_WRITE_TOKEN:-}
-    depends_on:
-      db:
-        condition: service_healthy
     volumes:
       - monsterats_uploads:/app/data/uploads
 
 volumes:
-  monsterats_pg:
   monsterats_uploads:

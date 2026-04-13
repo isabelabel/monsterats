@@ -1,28 +1,30 @@
-# Hosting Monsterats for others
+# Hosting Monsterats (Render + Turso)
 
-The app uses **PostgreSQL** for data. Pick one path:
+The app is a **Next.js** service with a **Turso (libSQL)** database. You can host the app on **[Render](https://render.com)** (or any Node host) and point it at a Turso database URL.
 
-| Path | Best for | Database | Images |
-|------|-----------|----------|--------|
-| **Vercel + Neon** | Lowest ops, HTTPS included | Neon (or any hosted Postgres) | **Vercel Blob** (required; Vercel disk is read-only) |
-| **Docker on a VPS** | Full control, fixed cost | Postgres in Compose or managed | **Blob** *or* persistent volume → `./data/uploads` |
+| Piece | Role |
+|--------|------|
+| **Turso** | Primary database (SQLite-compatible, remote libSQL). |
+| **Render** | Builds and runs `next build` / `next start`. |
+| **Images** | Optional **Vercel Blob** (`BLOB_READ_WRITE_TOKEN`), or **`./data/uploads`** on a persistent disk / local dev. |
 
 `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` must match the URL people use in the browser (including `https`), or sign-in and cookies break.
 
-**Magic links:** the app logs magic-link URLs to the server console. For production email delivery you would wire `sendMagicLink` in `src/lib/auth.ts` to a provider (Resend, Postmark, etc.); until then, rely on **email + password** for shared access.
+**Magic links:** URLs are logged to the server console unless you wire email in [`src/lib/auth.ts`](src/lib/auth.ts). Use **email + password** for production sharing unless you add a mail provider.
 
 ---
 
-## 1. Create a PostgreSQL database
+## 1. Create a Turso database
 
-- **[Neon](https://neon.tech)** (free tier): create a project, copy the connection string (prefer **pooled** / `?sslmode=require`).
-- **Docker Compose** (this repo): the `db` service is Postgres on port `5432` (dev only by default, or bundled with `--profile prod`).
+1. Install the [Turso CLI](https://docs.turso.tech/cli/overview) and sign in.
+2. Create a database: `turso db create monsterats`
+3. Get the URL: `turso db show monsterats --url`
+4. Create a token: `turso db tokens create monsterats`
 
-Example connection string:
+Set:
 
-```bash
-DATABASE_URL=postgresql://USER:PASSWORD@HOST.neon.tech/neondb?sslmode=require
-```
+- `TURSO_DATABASE_URL` — the `libsql://…` URL (or `file:./path.db` for local file DBs).
+- `TURSO_AUTH_TOKEN` — the token (omit or leave empty only for `file:` URLs).
 
 ---
 
@@ -30,101 +32,92 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST.neon.tech/neondb?sslmode=require
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `DATABASE_URL` | Yes | PostgreSQL URL |
+| `TURSO_DATABASE_URL` | Yes | Turso URL or `file:…` for local |
+| `TURSO_AUTH_TOKEN` | For remote Turso | Empty for `file:` URLs |
 | `BETTER_AUTH_SECRET` | Yes | Random string, **32+ characters** |
-| `BETTER_AUTH_URL` | Yes | Public site URL, no trailing slash |
+| `BETTER_AUTH_URL` | Yes | Public origin, no trailing slash |
 | `NEXT_PUBLIC_APP_URL` | Yes | Usually same as `BETTER_AUTH_URL` |
-| `BLOB_READ_WRITE_TOKEN` | On Vercel | **Required** for check-in photos, avatars, covers |
+| `BLOB_READ_WRITE_TOKEN` | Optional | Recommended on Render (ephemeral disk) for photos |
 
-Local dev: copy `.env.example` → `.env.local` and edit.
+Copy [`.env.example`](.env.example) → `.env.local` for local development.
 
 ---
 
 ## 3. Apply the database schema
 
-You do **not** have to run this on your laptop. `npm run db:push` only needs:
-
-- This repo (or a checkout that includes `drizzle.config.ts` and `src/db/`)
-- Node + dependencies (`npm ci` or `npm install`)
-- `DATABASE_URL` pointing at the **empty** database (same URL the app will use)
-
-Run it **once per new database**, from whichever place can reach Postgres:
-
-| Where | When it makes sense |
-|--------|---------------------|
-| **Your machine** | Easy if the DB is public (e.g. Neon) — put the hosted `DATABASE_URL` in `.env.local` and run `npm run db:push`. |
-| **The server (SSH)** | Clone the repo there, set `DATABASE_URL` in `.env` or `.env.local`, `npm ci`, then `npm run db:push`. |
-| **CI** | Same idea: secret `DATABASE_URL`, checkout, `npm ci`, `npm run db:push` before or after deploy. |
-
-The production **Docker image from this repo does not include Drizzle CLI**, so for the bundled Compose Postgres, either run `db:push` from the server with a normal Node checkout, or temporarily expose Postgres and run `db:push` from your laptop with that URL.
+With `TURSO_DATABASE_URL` (and token if needed) in `.env` / `.env.local`:
 
 ```bash
 npm run db:push
 ```
 
----
-
-## 4a. Deploy on Vercel (recommended)
-
-1. Push the repo to GitHub and **Import** it in [Vercel](https://vercel.com).
-2. Under **Settings → Environment Variables**, add **all** variables from §2.  
-   **Build** runs `next build` and loads server code, so `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and `NEXT_PUBLIC_APP_URL` must be set for **Production** (and Preview if you use previews).
-3. Add **Blob**: Project → **Storage** → Blob → create store → copy **read/write token** as `BLOB_READ_WRITE_TOKEN`.
-4. Deploy. Open the production URL and register the first account.
+Run **once per empty database**. You can run this from your laptop (against Turso) or from CI.
 
 ---
 
-## 4b. Deploy with Docker (VPS / home server)
+## 4. Deploy on Render
 
-The repo includes a **production** image (`Dockerfile`, Next **standalone** output) and optional **Compose** stack: Postgres + app + upload volume.
+1. Create a **Web Service**, connect this Git repository.
+2. **Build command:** `npm ci && npm run build`
+3. **Start command:** `npm start`
+4. **Environment:** add every variable from §2 for **Production** (and **Preview** if you use previews).  
+   **Build** loads server code that reads `TURSO_*` and auth config, so those must be present at build time.
+5. **Node:** use **20.x** (see `Dockerfile`).
+6. Open the Render URL (or your custom domain), register, and test a check-in with a photo.
 
-### On the server
+**Build fails with only “A complete log of this run can be found in …”:** scroll up in the log for the first `npm ERR!` block. Common cases:
 
-1. Install [Docker](https://docs.docker.com/engine/install/) and Docker Compose v2.
-2. Clone the repo and `cd` into it.
-3. Create a **`.env`** file in the project root (Compose reads it for variable substitution; do **not** commit it). Minimum:
+- **`npm ci` / lockfile:** run `npm install` locally, commit **`package-lock.json`**, redeploy. Or temporarily use **`npm install && npm run build`** as the build command (less strict than `npm ci`).
+- **`ERESOLVE` / peer dependencies:** try **`npm ci --legacy-peer-deps && npm run build`**.
+- **`EBADENGINE`:** set Render’s **Node** to **20** (this repo includes [`.node-version`](.node-version) for that) or add env `NODE_VERSION=20.18.1`.
 
-   ```bash
-   BETTER_AUTH_SECRET=your-long-random-secret-at-least-32-chars
-   BETTER_AUTH_URL=https://your-domain.example
-   NEXT_PUBLIC_APP_URL=https://your-domain.example
-   # Optional — omit to store uploads on the Docker volume under ./data/uploads
-   # BLOB_READ_WRITE_TOKEN=
-   ```
-
-4. Put the same app behind **HTTPS** (e.g. Caddy or nginx + Let’s Encrypt) on port 443 and reverse-proxy to `localhost:3000`, **or** for a quick LAN test use `http://YOUR_SERVER_IP:3000` and set both URLs to that (cookies may be stricter on plain HTTP).
-
-5. Start Postgres + web:
-
-   ```bash
-   docker compose --profile prod up -d --build
-   ```
-
-   - Default `docker compose up -d` (no profile) still starts **only Postgres** — same as local dev with `npm run dev`.
-   - The `web` service uses the internal URL `postgresql://postgres:postgres@db:5432/monsterats` (bundled DB). Change `docker-compose.yml` if you use an external database instead.
-
-6. **Schema:** from any machine that can reach the server’s Postgres, set `DATABASE_URL` to that database and run `npm run db:push` once. For the bundled Compose DB, expose `5432` (already mapped) and use `postgresql://postgres:postgres@SERVER_IP:5432/monsterats`, or run `docker compose exec db psql` only for inspection — Drizzle is easiest from your laptop with the URL above (open firewall for 5432 briefly, or use an SSH tunnel).
-
-7. Open `BETTER_AUTH_URL` in a browser and sign up.
-
-### Images without Blob
-
-If `BLOB_READ_WRITE_TOKEN` is unset, files go to **`/app/data/uploads`** in the container, backed by the **`monsterats_uploads`** volume in Compose — survives restarts. Use Blob if you scale to multiple app instances.
+**Uploads on Render:** the default filesystem is **ephemeral**. Either set `BLOB_READ_WRITE_TOKEN` (e.g. Vercel Blob) or attach a [Render disk](https://render.com/docs/disks) and ensure `./data/uploads` lives on that volume.
 
 ---
 
-## 5. Local development
+## 5. Docker (optional)
+
+For a container on your own VM:
 
 ```bash
-docker compose up -d
+# Root .env with TURSO_* , BETTER_AUTH_* , NEXT_PUBLIC_APP_URL , optional BLOB_*
+docker compose --profile prod up -d --build
+```
+
+See [`docker-compose.yml`](docker-compose.yml). There is **no** database container; Turso is always external (or use a `file:` URL on a mounted volume).
+
+---
+
+## 6. Local development
+
+```bash
 cp .env.example .env.local
-# edit .env.local
+# Set TURSO_DATABASE_URL (e.g. file:./data/local.db or libsql://… from `turso dev`)
+npm install
 npm run db:push
 npm run dev
 ```
 
+For a quick local file DB:
+
+```bash
+mkdir -p data
+# .env.local:
+# TURSO_DATABASE_URL=file:./data/local.db
+# TURSO_AUTH_TOKEN=
+```
+
 ---
 
-## Migrating from SQLite
+## 7. Migrating from PostgreSQL / Neon
 
-Older dev DBs used SQLite (`data/monsterats.db`). There is no automatic migration; use a fresh Postgres database and `db:push`, or move data manually.
+This codebase **no longer uses PostgreSQL**. There is no automatic migration.
+
+- **Greenfield:** create a new Turso DB and run `npm run db:push`.
+- **Keep old data:** export from Postgres (CSV/SQL) and write a one-off import script, or use a tool you trust; table/column layout matches [`src/db/schema.ts`](src/db/schema.ts) (SQLite types).
+
+---
+
+## Legacy (Vercel + Neon)
+
+Older docs referred to Vercel + Neon + `DATABASE_URL`. That stack is **not** what the current code expects; use **Turso** and **`TURSO_DATABASE_URL`** instead.

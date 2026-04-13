@@ -2,16 +2,17 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-Requires **PostgreSQL**. Quick local setup:
+Requires **Turso (libSQL)** or a local `file:` database. Quick local setup:
 
 ```bash
-docker compose up -d
 cp .env.example .env.local
+# Set TURSO_DATABASE_URL (e.g. file:./data/local.db — create ./data first)
+npm install
 npm run db:push
 npm run dev
 ```
 
-See **[DEPLOY.md](./DEPLOY.md)** for production hosting (Vercel, Neon, Blob, env vars).
+See **[DEPLOY.md](./DEPLOY.md)** for Turso, **Render**, Docker, and env vars.
 
 ---
 
