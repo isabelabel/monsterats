@@ -12,6 +12,10 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // libSQL loads `@libsql/linux-*` at runtime; standalone tracing often skips these optional natives.
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/@libsql/**/*", "./node_modules/libsql/**/*"],
+  },
   reactStrictMode: true,
   async headers() {
     return [

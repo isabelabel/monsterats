@@ -65,6 +65,13 @@ Run **once per empty database**. You can run this from your laptop (against Turs
 5. **Node:** use **20.x** (see `Dockerfile`).
 6. Open the Render URL (or your custom domain), register, and test a check-in with a photo.
 
+**“Internal Server Error” in the browser:** open the service → **Logs** (runtime), reload the page, and read the stack trace. Typical causes:
+
+- **`TURSO_DATABASE_URL` missing or wrong** — server throws when loading [`src/db/index.ts`](src/db/index.ts).
+- **Turso token invalid** — DB queries fail (check `TURSO_AUTH_TOKEN`).
+- **Tables missing** — run **`npm run db:push`** locally with the **same** Turso URL + token as production.
+- **Auth URL mismatch** — set `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` to your public `https://…` URL. The app also falls back to Render’s auto **`RENDER_EXTERNAL_URL`** when those are unset ([`src/lib/auth.ts`](src/lib/auth.ts)).
+
 **Build fails with only “A complete log of this run can be found in …”:** scroll up in the log for the first `npm ERR!` block. Common cases:
 
 - **`npm ci` / lockfile:** run `npm install` locally, commit **`package-lock.json`**, redeploy. Or temporarily use **`npm install && npm run build`** as the build command (less strict than `npm ci`).

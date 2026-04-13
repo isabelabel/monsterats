@@ -5,10 +5,32 @@ import { magicLink } from "better-auth/plugins";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
 
-const baseURL =
-  process.env.BETTER_AUTH_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "http://localhost:3000";
+function normalizeOrigin(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+/** Public origin for Better Auth (no trailing slash). Render sets RENDER_EXTERNAL_URL automatically. */
+const baseURL = normalizeOrigin(
+  process.env.BETTER_AUTH_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.RENDER_EXTERNAL_URL?.trim() ||
+    "http://localhost:3000",
+);
+
+const trustedOrigins = [
+  ...new Set(
+    (
+      [
+        baseURL,
+        process.env.BETTER_AUTH_URL?.trim(),
+        process.env.NEXT_PUBLIC_APP_URL?.trim(),
+        process.env.RENDER_EXTERNAL_URL?.trim(),
+      ] as (string | undefined)[]
+    )
+      .filter((u): u is string => Boolean(u))
+      .map(normalizeOrigin),
+  ),
+];
 
 const authSecret =
   process.env.BETTER_AUTH_SECRET ??
@@ -24,7 +46,7 @@ export const auth = betterAuth({
     enabled: true,
   },
   baseURL,
-  trustedOrigins: [baseURL],
+  trustedOrigins: trustedOrigins.length > 0 ? trustedOrigins : [baseURL],
   plugins: [
     nextCookies(),
     magicLink({
