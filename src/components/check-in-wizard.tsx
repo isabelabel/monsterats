@@ -318,7 +318,6 @@ export function CheckInWizard({
               type="file"
               name="photo"
               accept="image/*"
-              capture="environment"
               required
               className="text-muted w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-violet-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-violet-900"
             />

@@ -7,7 +7,7 @@ const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
 
 if (!url) {
   throw new Error(
-    "TURSO_DATABASE_URL is not set. Copy .env.example to .env.local and add your Turso URL (see DEPLOY.md).",
+    "TURSO_DATABASE_URL is not set. Locally: add it to .env.local (see .env.example). On Render: Dashboard → your service → Environment → add TURSO_DATABASE_URL (and TURSO_AUTH_TOKEN for remote Turso), then redeploy.",
   );
 }
 

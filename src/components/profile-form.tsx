@@ -48,7 +48,6 @@ export function ProfileForm({
           type="file"
           name="avatar"
           accept="image/*"
-          capture="user"
           className="text-muted w-full rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-violet-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-violet-900"
         />
       </label>

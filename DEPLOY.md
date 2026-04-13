@@ -61,7 +61,8 @@ Run **once per empty database**. You can run this from your laptop (against Turs
 2. **Build command:** `npm ci && npm run build`
 3. **Start command:** `npm start`
 4. **Environment:** add every variable from §2 for **Production** (and **Preview** if you use previews).  
-   **Build** loads server code that reads `TURSO_*` and auth config, so those must be present at build time.
+   **Build** loads server code that reads `TURSO_*` and auth config, so those must be present at build time.  
+   **Required names (exact):** `TURSO_DATABASE_URL` (e.g. `libsql://…`) and `TURSO_AUTH_TOKEN` (from `turso db tokens create`). If either is missing at runtime, `/api/auth` will error.
 5. **Node:** use **20.x** (see `Dockerfile`).
 6. Open the Render URL (or your custom domain), register, and test a check-in with a photo.
 
