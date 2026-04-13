@@ -22,8 +22,8 @@ export async function updateProfile(formData: FormData) {
   let image: string | null | undefined = session.user.image ?? undefined;
   if (file instanceof File && file.size > 0) {
     try {
-      const saved = await saveAvatarFile(session.user.id, file);
-      image = `/api/media/avatars/${saved}`;
+      // `saveAvatarFile` already returns a public URL (Blob https) or `/api/media/avatars/...`.
+      image = await saveAvatarFile(session.user.id, file);
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Avatar upload failed." };
     }

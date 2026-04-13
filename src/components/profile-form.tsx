@@ -1,8 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateProfileAction } from "@/app/actions/profile";
 import { UserAvatar } from "@/components/user-avatar";
+import {
+  reencodeImageForUpload,
+  shouldReencodeImageForUpload,
+} from "@/lib/reencode-image-for-upload";
 
 export function ProfileForm({
   initialName,
@@ -15,16 +19,41 @@ export function ProfileForm({
     updateProfileAction,
     undefined,
   );
+  const [prepareError, setPrepareError] = useState<string | undefined>();
+  const [optimizing, setOptimizing] = useState(false);
 
   return (
     <form
       action={formAction}
       encType="multipart/form-data"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setPrepareError(undefined);
+        const form = e.currentTarget;
+        const fd = new FormData(form);
+        const avatar = fd.get("avatar");
+        if (avatar instanceof File && avatar.size > 0) {
+          if (shouldReencodeImageForUpload(avatar)) {
+            setOptimizing(true);
+            try {
+              fd.set("avatar", await reencodeImageForUpload(avatar));
+            } catch {
+              setPrepareError(
+                "Could not read this photo. Try another image or export as JPEG.",
+              );
+              return;
+            } finally {
+              setOptimizing(false);
+            }
+          }
+        }
+        formAction(fd);
+      }}
       className="ui-surface mx-auto max-w-sm space-y-5 p-6"
     >
-      {state?.error && (
+      {(state?.error || prepareError) && (
         <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {state.error}
+          {prepareError ?? state?.error}
         </p>
       )}
       <div className="flex justify-center">
@@ -53,10 +82,10 @@ export function ProfileForm({
       </label>
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || optimizing}
         className="ui-btn-primary w-full disabled:opacity-50"
       >
-        {pending ? "Saving…" : "Save profile"}
+        {pending ? "Saving…" : optimizing ? "Preparing photo…" : "Save profile"}
       </button>
     </form>
   );

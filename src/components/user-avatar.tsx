@@ -1,3 +1,5 @@
+import { resolveAvatarImageUrl } from "@/lib/media-url";
+
 export function UserAvatar({
   name,
   imageUrl,
@@ -17,11 +19,12 @@ export function UserAvatar({
     return (a + b).toUpperCase();
   })();
 
-  if (imageUrl) {
+  const src = resolveAvatarImageUrl(imageUrl);
+  if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={imageUrl}
+        src={src}
         alt=""
         width={size}
         height={size}
