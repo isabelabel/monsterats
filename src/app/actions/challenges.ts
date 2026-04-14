@@ -101,6 +101,10 @@ async function runCreateChallenge(
 
   let coverImageFile: string | null = null;
   const cover = formData.get("cover");
+  const coverUrlRaw = String(formData.get("coverUrl") ?? "").trim() || null;
+  if (coverUrlRaw) {
+    coverImageFile = coverUrlRaw;
+  }
   if (cover instanceof File && cover.size > 0) {
     try {
       coverImageFile = await saveChallengeCoverFile(id, cover);
@@ -225,6 +229,11 @@ export async function updateChallenge(challengeId: string, formData: FormData) {
 
   let coverImageFile: string | null = ch.coverImageFile ?? null;
   const cover = formData.get("cover");
+  const coverUrlRaw = String(formData.get("coverUrl") ?? "").trim() || null;
+  if (coverUrlRaw) {
+    await unlinkChallengeCoverFile(ch.coverImageFile);
+    coverImageFile = coverUrlRaw;
+  }
   if (cover instanceof File && cover.size > 0) {
     try {
       const saved = await saveChallengeCoverFile(challengeId, cover);
@@ -285,6 +294,17 @@ export async function updateChallengeCoverFormAction(
   if (ch.creatorId !== session.user.id) return { error: "Not allowed." };
 
   const cover = formData.get("cover");
+  const coverUrlRaw = String(formData.get("coverUrl") ?? "").trim() || null;
+  if (coverUrlRaw) {
+    await unlinkChallengeCoverFile(ch.coverImageFile);
+    await db
+      .update(challenges)
+      .set({ coverImageFile: coverUrlRaw })
+      .where(eq(challenges.id, challengeId));
+    revalidatePath(`/challenges/${challengeId}`, "layout");
+    revalidatePath("/");
+    redirect(`/challenges/${challengeId}/feed`);
+  }
   if (!(cover instanceof File) || cover.size === 0) {
     return { error: "Choose an image file." };
   }

@@ -15,6 +15,10 @@ import {
 } from "@/app/actions/challenges";
 import { challengeImportSchema } from "@/lib/challenge-template";
 import { toDatetimeLocalValue } from "@/lib/datetime-form";
+import {
+  reencodeImageForUpload,
+  shouldReencodeImageForUpload,
+} from "@/lib/reencode-image-for-upload";
 import { parseScoringRules } from "@/lib/scoring/types";
 
 const SIMPLE_PRESET = JSON.stringify([
@@ -55,17 +59,22 @@ export function ChallengeWizard() {
   const [importPaste, setImportPaste] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string>("");
+  const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
   const coverObjectUrlRef = useRef<string | null>(null);
   const coverFileRef = useRef<File | null>(null);
 
   const onCoverFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      setCoverUploadError(null);
       if (coverObjectUrlRef.current) {
         URL.revokeObjectURL(coverObjectUrlRef.current);
         coverObjectUrlRef.current = null;
       }
       const f = e.target.files?.[0] ?? null;
       coverFileRef.current = f;
+      setCoverUrl("");
       if (f) {
         const url = URL.createObjectURL(f);
         coverObjectUrlRef.current = url;
@@ -78,11 +87,61 @@ export function ChallengeWizard() {
   );
 
   const onCreateSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
+    async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      setCoverUploadError(null);
       const fd = new FormData(e.currentTarget);
       const c = coverFileRef.current;
-      if (c) fd.set("cover", c);
+      if (c) {
+        setCoverUploading(true);
+        try {
+          const prepared = shouldReencodeImageForUpload(c)
+            ? await reencodeImageForUpload(c)
+            : c;
+          const ct = (prepared.type || "image/jpeg").toLowerCase();
+          const ext =
+            ct === "image/png" ? "png" : ct === "image/webp" ? "webp" : "jpg";
+
+          const presign = await fetch("/api/uploads/presign", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              kind: "challengeCover",
+              contentType: ct,
+              ext,
+              // Challenge ID isn't known yet; store under a temp key based on cuid.
+              // Server will still accept `coverUrl` and persist it.
+              challengeId: "new",
+            }),
+          });
+          const presignJson = await presign.json().catch(() => ({}));
+          if (!presign.ok) {
+            throw new Error(
+              presignJson?.error || "Could not start cover upload. Try again.",
+            );
+          }
+          const uploadUrl = String(presignJson.uploadUrl ?? "");
+          const publicUrl = String(presignJson.publicUrl ?? "");
+          if (!uploadUrl || !publicUrl) throw new Error("Cover upload failed.");
+
+          const put = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": ct },
+            body: prepared,
+          });
+          if (!put.ok) throw new Error("Cover upload failed. Try again.");
+
+          setCoverUrl(publicUrl);
+          fd.set("coverUrl", publicUrl);
+        } catch (err) {
+          setCoverUploadError(
+            err instanceof Error ? err.message : "Cover upload failed.",
+          );
+          return;
+        } finally {
+          setCoverUploading(false);
+        }
+      }
       dispatchCreate(fd);
     },
     [dispatchCreate],
@@ -212,6 +271,11 @@ export function ChallengeWizard() {
         <span className="text-muted block text-xs">
           JPEG, PNG, or WebP, up to 10MB.
         </span>
+        {coverUploadError && (
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {coverUploadError}
+          </p>
+        )}
         {coverPreview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

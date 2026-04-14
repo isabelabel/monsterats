@@ -19,8 +19,11 @@ export async function updateProfile(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (name.length < 1) return { error: "Name is required." };
   const file = formData.get("avatar");
+  const avatarUrl = String(formData.get("avatarUrl") ?? "").trim() || null;
   let image: string | null | undefined = session.user.image ?? undefined;
-  if (file instanceof File && file.size > 0) {
+  if (avatarUrl) {
+    image = avatarUrl;
+  } else if (file instanceof File && file.size > 0) {
     try {
       // `saveAvatarFile` already returns a public URL (Blob https) or `/api/media/avatars/...`.
       image = await saveAvatarFile(session.user.id, file);

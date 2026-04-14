@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createId } from "@paralleldrive/cuid2";
 import { del, put } from "@vercel/blob";
+import { deleteR2ObjectByPublicUrl } from "@/lib/r2";
 
 export const UPLOAD_ROOT = path.join(process.cwd(), "data", "uploads");
 
@@ -215,6 +216,13 @@ export function checkinPhotoPath(fileName: string): string {
 /** Removes proof image; supports local `/api/media/checkins/...` and Blob URLs. */
 export async function unlinkCheckinPhotoByUrl(photoUrl: string): Promise<void> {
   if (/^https?:\/\//i.test(photoUrl)) {
+    // Prefer R2 deletion when configured.
+    try {
+      await deleteR2ObjectByPublicUrl(photoUrl);
+      return;
+    } catch {
+      // Fall back to Vercel Blob delete for legacy URLs.
+    }
     try {
       await del(photoUrl, { token: process.env.BLOB_READ_WRITE_TOKEN });
     } catch {
@@ -246,6 +254,12 @@ export async function unlinkChallengeCoverFile(
 ): Promise<void> {
   if (!fileName?.trim()) return;
   if (/^https?:\/\//i.test(fileName)) {
+    try {
+      await deleteR2ObjectByPublicUrl(fileName);
+      return;
+    } catch {
+      // ignore; may be legacy Blob
+    }
     try {
       await del(fileName, { token: process.env.BLOB_READ_WRITE_TOKEN });
     } catch {

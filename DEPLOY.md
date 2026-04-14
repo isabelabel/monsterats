@@ -6,7 +6,7 @@ The app is a **Next.js** service with a **Turso (libSQL)** database. You can hos
 |--------|------|
 | **Turso** | Primary database (SQLite-compatible, remote libSQL). |
 | **Render** | Builds and runs `next build` / `next start`. |
-| **Images** | Optional **Vercel Blob** (`BLOB_READ_WRITE_TOKEN`), or **`./data/uploads`** on a persistent disk / local dev. |
+| **Images** | Recommended **Cloudflare R2** (direct-to-R2 uploads), or legacy **Vercel Blob** (`BLOB_READ_WRITE_TOKEN`), or **`./data/uploads`** on a persistent disk / local dev. |
 
 `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` must match the URL people use in the browser (including `https`), or sign-in and cookies break.
 
@@ -37,7 +37,12 @@ Set:
 | `BETTER_AUTH_SECRET` | Yes | Random string, **32+ characters** |
 | `BETTER_AUTH_URL` | Yes | Public origin, no trailing slash |
 | `NEXT_PUBLIC_APP_URL` | Yes | Usually same as `BETTER_AUTH_URL` |
-| `BLOB_READ_WRITE_TOKEN` | Optional | Recommended on Render (ephemeral disk) for photos |
+| `R2_ACCOUNT_ID` | Recommended | Cloudflare account id (R2) |
+| `R2_ACCESS_KEY_ID` | Recommended | R2 access key id |
+| `R2_SECRET_ACCESS_KEY` | Recommended | R2 secret |
+| `R2_BUCKET` | Recommended | R2 bucket name |
+| `R2_PUBLIC_BASE_URL` | Recommended | Public base URL serving `/${key}` (e.g. `https://cdn.example.com`) |
+| `BLOB_READ_WRITE_TOKEN` | Optional | Legacy: Vercel Blob token (fallback for older URLs) |
 
 Copy [`.env.example`](.env.example) → `.env.local` for local development.
 
@@ -79,7 +84,7 @@ Run **once per empty database**. You can run this from your laptop (against Turs
 - **`ERESOLVE` / peer dependencies:** try **`npm ci --legacy-peer-deps && npm run build`**.
 - **`EBADENGINE`:** set Render’s **Node** to **20** (this repo includes [`.node-version`](.node-version) for that) or add env `NODE_VERSION=20.18.1`.
 
-**Uploads on Render:** the default filesystem is **ephemeral**. Either set `BLOB_READ_WRITE_TOKEN` (e.g. Vercel Blob) or attach a [Render disk](https://render.com/docs/disks) and ensure `./data/uploads` lives on that volume.
+**Uploads on Render:** the default filesystem is **ephemeral**.\n+\n+- **Recommended:** configure **Cloudflare R2** and `R2_*` env vars (uploads go directly from the browser to R2).\n+- **Legacy fallback:** set `BLOB_READ_WRITE_TOKEN` (Vercel Blob).\n+- **Filesystem:** attach a [Render disk](https://render.com/docs/disks) and ensure `./data/uploads` lives on that volume.
 
 ---
 

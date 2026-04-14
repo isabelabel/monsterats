@@ -103,6 +103,7 @@ async function runCreateCheckIn(
       : Number(elevationRaw);
   const description = String(formData.get("description") ?? "").trim() || null;
   const photo = formData.get("photo");
+  const photoUrlRaw = String(formData.get("photoUrl") ?? "").trim() || null;
   const workoutTimes = parseOptionalWorkoutTimes(
     formData.get("workoutStartTime"),
     formData.get("workoutEndTime"),
@@ -185,7 +186,7 @@ async function runCreateCheckIn(
     todayCheckIns,
   );
 
-  if (!(photo instanceof File) || photo.size === 0) {
+  if (!photoUrlRaw && (!(photo instanceof File) || photo.size === 0)) {
     return { error: "Photo proof is required." };
   }
 
@@ -212,10 +213,14 @@ async function runCreateCheckIn(
   if (!scored.ok) return { error: scored.error };
 
   let photoUrl: string;
-  try {
-    photoUrl = await saveCheckinPhoto(photo);
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Photo upload failed." };
+  if (photoUrlRaw) {
+    photoUrl = photoUrlRaw;
+  } else {
+    try {
+      photoUrl = await saveCheckinPhoto(photo as File);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Photo upload failed." };
+    }
   }
   const id = createId();
 

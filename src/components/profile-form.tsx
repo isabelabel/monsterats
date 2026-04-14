@@ -21,6 +21,8 @@ export function ProfileForm({
   );
   const [prepareError, setPrepareError] = useState<string | undefined>();
   const [optimizing, setOptimizing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string>("");
 
   return (
     <form
@@ -33,18 +35,59 @@ export function ProfileForm({
         const fd = new FormData(form);
         const avatar = fd.get("avatar");
         if (avatar instanceof File && avatar.size > 0) {
-          if (shouldReencodeImageForUpload(avatar)) {
-            setOptimizing(true);
-            try {
-              fd.set("avatar", await reencodeImageForUpload(avatar));
-            } catch {
-              setPrepareError(
-                "Could not read this photo. Try another image or export as JPEG.",
+          setUploading(true);
+          try {
+            const prepared = shouldReencodeImageForUpload(avatar)
+              ? await (async () => {
+                  setOptimizing(true);
+                  try {
+                    return await reencodeImageForUpload(avatar);
+                  } finally {
+                    setOptimizing(false);
+                  }
+                })()
+              : avatar;
+
+            const ct = (prepared.type || "image/jpeg").toLowerCase();
+            const ext =
+              ct === "image/png" ? "png" : ct === "image/webp" ? "webp" : "jpg";
+
+            const presign = await fetch("/api/uploads/presign", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                kind: "avatar",
+                contentType: ct,
+                ext,
+              }),
+            });
+            const presignJson = await presign.json().catch(() => ({}));
+            if (!presign.ok) {
+              throw new Error(
+                presignJson?.error || "Could not start upload. Try again.",
               );
-              return;
-            } finally {
-              setOptimizing(false);
             }
+            const uploadUrl = String(presignJson.uploadUrl ?? "");
+            const publicUrl = String(presignJson.publicUrl ?? "");
+            if (!uploadUrl || !publicUrl) throw new Error("Upload failed.");
+
+            const put = await fetch(uploadUrl, {
+              method: "PUT",
+              headers: { "Content-Type": ct },
+              body: prepared,
+            });
+            if (!put.ok) throw new Error("Upload failed. Try again.");
+
+            setUploadedAvatarUrl(publicUrl);
+            fd.set("avatarUrl", publicUrl);
+            fd.delete("avatar");
+          } catch (err) {
+            setPrepareError(
+              err instanceof Error ? err.message : "Upload failed. Try again.",
+            );
+            return;
+          } finally {
+            setUploading(false);
           }
         }
         formAction(fd);
@@ -69,6 +112,7 @@ export function ProfileForm({
           className="ui-input w-full"
         />
       </label>
+      <input type="hidden" name="avatarUrl" value={uploadedAvatarUrl} />
       <label className="block">
         <span className="text-muted mb-1.5 block text-sm font-medium">
           New avatar
@@ -82,10 +126,16 @@ export function ProfileForm({
       </label>
       <button
         type="submit"
-        disabled={pending || optimizing}
+        disabled={pending || optimizing || uploading}
         className="ui-btn-primary w-full disabled:opacity-50"
       >
-        {pending ? "Saving…" : optimizing ? "Preparing photo…" : "Save profile"}
+        {pending
+          ? "Saving…"
+          : optimizing
+            ? "Preparing photo…"
+            : uploading
+              ? "Uploading photo…"
+              : "Save profile"}
       </button>
     </form>
   );

@@ -58,6 +58,8 @@ export function CheckInWizard({
   const [workoutEndTime, setWorkoutEndTime] = useState("");
   const [prepareError, setPrepareError] = useState<string | undefined>();
   const [optimizingPhoto, setOptimizingPhoto] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>("");
 
   const resolvedActivityType = useMemo(() => {
     if (activityChoice === OTHER_ACTIVITY_VALUE) {
@@ -345,19 +347,62 @@ export function CheckInWizard({
             const fd = new FormData(form);
             const photo = fd.get("photo");
             if (photo instanceof File && photo.size > 0) {
-              if (shouldReencodeImageForUpload(photo)) {
-                setOptimizingPhoto(true);
-                try {
-                  const jpeg = await reencodeImageForUpload(photo);
-                  fd.set("photo", jpeg);
-                } catch {
-                  setPrepareError(
-                    "Could not read this photo on your device. Try another picture, or export as JPEG (iPhone: Settings → Camera → Formats → Most Compatible).",
+              // Direct-to-R2 upload first, then submit only the URL.
+              setUploadingPhoto(true);
+              try {
+                const prepared = shouldReencodeImageForUpload(photo)
+                  ? await (async () => {
+                      setOptimizingPhoto(true);
+                      try {
+                        return await reencodeImageForUpload(photo);
+                      } finally {
+                        setOptimizingPhoto(false);
+                      }
+                    })()
+                  : photo;
+
+                const ct = (prepared.type || "image/jpeg").toLowerCase();
+                const ext =
+                  ct === "image/png" ? "png" : ct === "image/webp" ? "webp" : "jpg";
+
+                const presign = await fetch("/api/uploads/presign", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    kind: "checkin",
+                    contentType: ct,
+                    ext,
+                  }),
+                });
+                const presignJson = await presign.json().catch(() => ({}));
+                if (!presign.ok) {
+                  throw new Error(
+                    presignJson?.error || "Could not start upload. Try again.",
                   );
-                  return;
-                } finally {
-                  setOptimizingPhoto(false);
                 }
+                const uploadUrl = String(presignJson.uploadUrl ?? "");
+                const publicUrl = String(presignJson.publicUrl ?? "");
+                if (!uploadUrl || !publicUrl) throw new Error("Upload failed.");
+
+                const put = await fetch(uploadUrl, {
+                  method: "PUT",
+                  headers: { "Content-Type": ct },
+                  body: prepared,
+                });
+                if (!put.ok) throw new Error("Upload failed. Try again.");
+
+                setUploadedPhotoUrl(publicUrl);
+                fd.set("photoUrl", publicUrl);
+                fd.delete("photo");
+              } catch (err) {
+                setPrepareError(
+                  err instanceof Error
+                    ? err.message
+                    : "Upload failed. Try again.",
+                );
+                return;
+              } finally {
+                setUploadingPhoto(false);
               }
             }
             submitAction(fd);
@@ -384,6 +429,7 @@ export function CheckInWizard({
           <input type="hidden" name="description" value={description} />
           <input type="hidden" name="workoutStartTime" value={workoutStartTime} />
           <input type="hidden" name="workoutEndTime" value={workoutEndTime} />
+          <input type="hidden" name="photoUrl" value={uploadedPhotoUrl} />
           {(state?.error || prepareError) && (
             <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {prepareError ?? state?.error}
@@ -411,13 +457,15 @@ export function CheckInWizard({
             </button>
             <button
               type="submit"
-              disabled={pending || optimizingPhoto}
+              disabled={pending || optimizingPhoto || uploadingPhoto}
               className="ui-btn-primary flex-1 disabled:opacity-50"
             >
               {pending
                 ? "Submitting…"
                 : optimizingPhoto
                   ? "Preparing photo…"
+                  : uploadingPhoto
+                    ? "Uploading photo…"
                   : "Submit check-in"}
             </button>
           </div>
