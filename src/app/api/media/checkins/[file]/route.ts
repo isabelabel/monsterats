@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { checkinPhotoPath } from "@/lib/uploads";
+import { r2PublicBaseUrl } from "@/lib/r2";
 
 export async function GET(
   _req: NextRequest,
@@ -24,6 +25,10 @@ export async function GET(
       },
     });
   } catch {
+    const base = r2PublicBaseUrl();
+    if (base) {
+      return NextResponse.redirect(`${base}/checkins/${encodeURIComponent(file)}`, 302);
+    }
     return new NextResponse(null, { status: 404 });
   }
 }
