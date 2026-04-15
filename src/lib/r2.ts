@@ -20,6 +20,9 @@ export function createR2Client(): S3Client {
   return new S3Client({
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    // Cloudflare TLS cert is `*.r2.cloudflarestorage.com` (one label).
+    // Virtual-hosted-style (`<bucket>.<accountId>.r2...`) doesn't match and fails TLS in browsers.
+    forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
   });
 }
