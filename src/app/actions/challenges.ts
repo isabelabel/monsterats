@@ -1,7 +1,5 @@
 "use server";
 
-import fs from "node:fs/promises";
-import path from "node:path";
 import { desc, eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { revalidatePath } from "next/cache";
@@ -20,6 +18,7 @@ import {
   saveChallengeCoverFile,
   unlinkChallengeCoverFile,
 } from "@/lib/uploads";
+import nucelTemplateJson from "../../../public/templates/nucel.json";
 
 function parseWeights(points: string, consistency: string) {
   const p = Number(points);
@@ -328,8 +327,8 @@ export async function updateChallengeCoverFormAction(
 }
 
 /**
- * Appends any activities from `public/templates/nucel.json` that are not
- * already in the challenge (by exact `name`). Does not remove or edit rules.
+ * Appends any activities from the bundled NuCel template (`public/templates/nucel.json`)
+ * that are not already in the challenge (by exact `name`). Does not remove or edit rules.
  */
 export async function mergeNucelActivitiesFormAction(formData: FormData) {
   const session = await requireSession();
@@ -343,14 +342,7 @@ export async function mergeNucelActivitiesFormAction(formData: FormData) {
     redirect("/");
   }
 
-  const filePath = path.join(
-    process.cwd(),
-    "public",
-    "templates",
-    "nucel.json",
-  );
-  const raw = await fs.readFile(filePath, "utf-8");
-  const template = challengeImportSchema.parse(JSON.parse(raw));
+  const template = challengeImportSchema.parse(nucelTemplateJson);
 
   const existing = parseScoringRules(ch.scoringRules);
   const names = new Set(existing.map((r) => r.name));
