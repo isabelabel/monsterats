@@ -326,46 +326,71 @@ export async function updateChallengeCoverFormAction(
   redirect(`/challenges/${challengeId}/feed`);
 }
 
+export type MergeNucelActivitiesState =
+  | { ok: true; added: number }
+  | { ok: false; error: string };
+
 /**
  * Appends any activities from the bundled NuCel template (`public/templates/nucel.json`)
  * that are not already in the challenge (by exact `name`). Does not remove or edit rules.
+ *
+ * Signature supports `useActionState` from the client merge form.
  */
-export async function mergeNucelActivitiesFormAction(formData: FormData) {
+export async function mergeNucelActivitiesFormAction(
+  _prev: MergeNucelActivitiesState | undefined,
+  formData: FormData,
+): Promise<MergeNucelActivitiesState> {
   const session = await requireSession();
-  const challengeId = String(formData.get("challengeId") ?? "");
-  if (!challengeId) redirect("/");
+  const challengeId = String(formData.get("challengeId") ?? "").trim();
+  if (!challengeId) {
+    return { ok: false, error: "Missing challenge id." };
+  }
 
   const ch = await db.query.challenges.findFirst({
     where: eq(challenges.id, challengeId),
   });
-  if (!ch || ch.creatorId !== session.user.id) {
-    redirect("/");
+  if (!ch) {
+    return { ok: false, error: "Challenge not found." };
+  }
+  if (ch.creatorId !== session.user.id) {
+    return {
+      ok: false,
+      error: "Only the organizer can merge the NuCel activity list.",
+    };
   }
 
-  const template = challengeImportSchema.parse(nucelTemplateJson);
+  try {
+    const template = challengeImportSchema.parse(nucelTemplateJson);
 
-  const existing = parseScoringRules(ch.scoringRules);
-  const names = new Set(existing.map((r) => r.name));
-  const merged = [...existing];
-  let added = 0;
-  for (const rule of template.activities) {
-    if (!names.has(rule.name)) {
-      merged.push(rule);
-      names.add(rule.name);
-      added += 1;
+    const existing = parseScoringRules(ch.scoringRules);
+    const names = new Set(existing.map((r) => r.name));
+    const merged = [...existing];
+    let added = 0;
+    for (const rule of template.activities) {
+      if (!names.has(rule.name)) {
+        merged.push(rule);
+        names.add(rule.name);
+        added += 1;
+      }
     }
+
+    parseScoringRules(merged);
+
+    await db
+      .update(challenges)
+      .set({ scoringRules: merged as never })
+      .where(eq(challenges.id, challengeId));
+
+    revalidatePath(`/challenges/${challengeId}`, "layout");
+    revalidatePath("/");
+    return { ok: true, added };
+  } catch (e) {
+    return {
+      ok: false,
+      error:
+        e instanceof Error ? e.message : "Could not merge NuCel activities.",
+    };
   }
-
-  parseScoringRules(merged);
-
-  await db
-    .update(challenges)
-    .set({ scoringRules: merged as never })
-    .where(eq(challenges.id, challengeId));
-
-  revalidatePath(`/challenges/${challengeId}`, "layout");
-  revalidatePath("/");
-  redirect(`/challenges/${challengeId}/feed?merged=${added}`);
 }
 
 export async function listMyChallenges() {
