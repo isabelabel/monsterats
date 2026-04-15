@@ -347,10 +347,12 @@ export async function mergeNucelActivitiesFormAction(formData: FormData) {
   const existing = parseScoringRules(ch.scoringRules);
   const names = new Set(existing.map((r) => r.name));
   const merged = [...existing];
+  let added = 0;
   for (const rule of template.activities) {
     if (!names.has(rule.name)) {
       merged.push(rule);
       names.add(rule.name);
+      added += 1;
     }
   }
 
@@ -363,7 +365,7 @@ export async function mergeNucelActivitiesFormAction(formData: FormData) {
 
   revalidatePath(`/challenges/${challengeId}`, "layout");
   revalidatePath("/");
-  redirect(`/challenges/${challengeId}/feed`);
+  redirect(`/challenges/${challengeId}/feed?merged=${added}`);
 }
 
 export async function listMyChallenges() {

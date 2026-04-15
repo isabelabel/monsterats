@@ -9,10 +9,14 @@ import { getSession } from "@/lib/session";
 
 export default async function ChallengeFeedPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ merged?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const merged = Number(sp.merged);
   const session = await getSession();
   const ch = await db.query.challenges.findFirst({
     where: eq(challenges.id, id),
@@ -36,6 +40,13 @@ export default async function ChallengeFeedPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
+      {Number.isFinite(merged) && merged >= 0 && (
+        <div className="rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-sm leading-relaxed text-zinc-700">
+          {merged === 0
+            ? "Already up to date — no NuCel activities were missing."
+            : `Added ${merged} NuCel ${merged === 1 ? "activity" : "activities"}.`}
+        </div>
+      )}
       {status === "active" && (
         <Link
           href={`/challenges/${id}/check-in`}
