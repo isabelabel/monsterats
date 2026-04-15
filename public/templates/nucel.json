@@ -149,6 +149,18 @@
       "below_threshold_points": 0.7
     },
     {
+      "name": "Spinning",
+      "mode": "duration_scaled",
+      "brackets": [
+        { "up_to_min": 30, "points": 0.6 },
+        { "up_to_min": 45, "points": 0.85 },
+        { "up_to_min": 60, "points": 1.0 },
+        { "up_to_min": 90, "points": 1.35 },
+        { "up_to_min": 120, "points": 1.7 }
+      ],
+      "extra_per_30min": 0.3
+    },
+    {
       "name": "Elíptico",
       "mode": "conversion",
       "min_distance_km": 5.5,
