@@ -51,9 +51,13 @@ export function MergeNucelActivitiesForm({
           role="status"
           aria-live="polite"
         >
-          {state.added === 0
+          {state.added === 0 && state.updated === 0
             ? "Already up to date — no NuCel activities were missing."
-            : `Added ${state.added} NuCel ${state.added === 1 ? "activity" : "activities"}.`}
+            : state.added > 0 && state.updated > 0
+              ? `Added ${state.added} NuCel ${state.added === 1 ? "activity" : "activities"} and updated ${state.updated} existing NuCel rules.`
+              : state.added > 0
+                ? `Added ${state.added} NuCel ${state.added === 1 ? "activity" : "activities"}.`
+                : `Updated ${state.updated} existing NuCel rules (including Spinning intensity).`}
         </p>
       )}
     </form>

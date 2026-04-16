@@ -327,7 +327,7 @@ export async function updateChallengeCoverFormAction(
 }
 
 export type MergeNucelActivitiesState =
-  | { ok: true; added: number }
+  | { ok: true; added: number; updated: number }
   | { ok: false; error: string };
 
 /**
@@ -363,14 +363,35 @@ export async function mergeNucelActivitiesFormAction(
     const template = challengeImportSchema.parse(nucelTemplateJson);
 
     const existing = parseScoringRules(ch.scoringRules);
-    const names = new Set(existing.map((r) => r.name));
     const merged = [...existing];
+    const byName = new Map(merged.map((r, i) => [r.name, i]));
     let added = 0;
+    let updated = 0;
+
     for (const rule of template.activities) {
-      if (!names.has(rule.name)) {
+      const idx = byName.get(rule.name);
+      if (idx == null) {
         merged.push(rule);
-        names.add(rule.name);
+        byName.set(rule.name, merged.length - 1);
         added += 1;
+        continue;
+      }
+
+      // Targeted patch: if Spinning already exists in the challenge, update it
+      // when template provides `intensity_mode`.
+      if (
+        rule.name === "Spinning" &&
+        rule.mode === "duration_scaled" &&
+        rule.intensity_mode === "scale_by_level"
+      ) {
+        const current = merged[idx]!;
+        if (
+          current.mode !== "duration_scaled" ||
+          current.intensity_mode !== "scale_by_level"
+        ) {
+          merged[idx] = rule;
+          updated += 1;
+        }
       }
     }
 
@@ -383,7 +404,7 @@ export async function mergeNucelActivitiesFormAction(
 
     revalidatePath(`/challenges/${challengeId}`, "layout");
     revalidatePath("/");
-    return { ok: true, added };
+    return { ok: true, added, updated };
   } catch (e) {
     return {
       ok: false,

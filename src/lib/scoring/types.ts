@@ -59,6 +59,12 @@ const durationScaledRuleSchema = z.object({
   mode: z.literal("duration_scaled"),
   brackets: z.array(durationBracketSchema).min(1),
   extra_per_30min: z.number().optional(),
+  /**
+   * When set, the check-in UI will ask the user to provide an intensity
+   * level (1/2/3). The computed duration-scaled points are multiplied by
+   * that intensity.
+   */
+  intensity_mode: z.literal("scale_by_level").optional(),
 });
 
 const distanceScaledRuleSchema = z.object({

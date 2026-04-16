@@ -93,6 +93,18 @@ async function runCreateCheckIn(
 
   const activityType = String(formData.get("activityType") ?? "").trim();
   const durationMin = Number(formData.get("durationMin") ?? 0);
+  const intensityRaw = formData.get("intensity");
+  const intensityNum =
+    intensityRaw == null || intensityRaw === "" ? null : Number(intensityRaw);
+  const intensityLevel: 1 | 2 | 3 | undefined =
+    intensityNum === 1 || intensityNum === 2 || intensityNum === 3
+      ? (intensityNum as 1 | 2 | 3)
+      : intensityNum == null
+        ? undefined
+        : undefined;
+  if (intensityNum != null && intensityLevel == null) {
+    return { error: "Intensity must be 1, 2, or 3." };
+  }
   const distanceRaw = formData.get("distanceKm");
   const distanceKm =
     distanceRaw === "" || distanceRaw == null ? null : Number(distanceRaw);
@@ -204,6 +216,7 @@ async function runCreateCheckIn(
       ? { elevationM }
       : {}),
     priorHighIntensityCheckInsToday,
+    ...(intensityLevel != null ? { intensityLevel } : {}),
   };
   const scored = listed
     ? scoreCheckIn(rules, activityType, durationMin, distanceKm, scoreOpts)

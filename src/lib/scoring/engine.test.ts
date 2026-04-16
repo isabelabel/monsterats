@@ -59,6 +59,48 @@ describe("scoreCheckIn", () => {
     expect(r).toEqual({ ok: true, points: 1.75 });
   });
 
+  it("duration_scaled intensity scales computed points", () => {
+    const spinningRules = parseScoringRules([
+      {
+        name: "Spinning",
+        mode: "duration_scaled",
+        intensity_mode: "scale_by_level",
+        brackets: [{ up_to_min: 60, points: 1.0 }],
+        extra_per_30min: 0.3,
+      },
+    ]);
+
+    const lowIntensity = scoreCheckIn(
+      spinningRules,
+      "Spinning",
+      90,
+      null,
+      { intensityLevel: 1 },
+    );
+    expect(lowIntensity).toEqual({ ok: true, points: 1.3 });
+
+    const midIntensity = scoreCheckIn(
+      spinningRules,
+      "Spinning",
+      90,
+      null,
+      { intensityLevel: 2 },
+    );
+    expect(midIntensity).toEqual({ ok: true, points: 2.6 });
+
+    const highIntensity = scoreCheckIn(
+      spinningRules,
+      "Spinning",
+      90,
+      null,
+      { intensityLevel: 3 },
+    );
+    expect(highIntensity.ok).toBe(true);
+    if (highIntensity.ok) {
+      expect(highIntensity.points).toBeCloseTo(3.9, 10);
+    }
+  });
+
   it("distance_scaled street run 4km", () => {
     const r = scoreCheckIn(rules, "Corrida (rua)", 40, 4);
     expect(r).toEqual({ ok: true, points: 0.8 });

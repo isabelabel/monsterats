@@ -14,7 +14,8 @@ export function isAlwaysOnePointActivityRule(rule: ActivityRule): boolean {
     case "duration_scaled":
       return (
         rule.brackets.every((b) => b.points === 1) &&
-        (rule.extra_per_30min == null || rule.extra_per_30min === 0)
+        (rule.extra_per_30min == null || rule.extra_per_30min === 0) &&
+        rule.intensity_mode !== "scale_by_level"
       );
     case "distance_scaled":
       return (

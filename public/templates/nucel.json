@@ -151,6 +151,7 @@
     {
       "name": "Spinning",
       "mode": "duration_scaled",
+      "intensity_mode": "scale_by_level",
       "brackets": [
         { "up_to_min": 30, "points": 0.6 },
         { "up_to_min": 45, "points": 0.85 },

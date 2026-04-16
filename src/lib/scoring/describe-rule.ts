@@ -21,9 +21,13 @@ export function formatActivityRuleShort(rule: ActivityRule): string {
       const lo = sorted[0]!;
       const hi = sorted[sorted.length - 1]!;
       if (sorted.length === 1) {
-        return `Up to ${fmtNum(lo.up_to_min)} min → ${fmtNum(lo.points)} pt`;
+        return rule.intensity_mode === "scale_by_level"
+          ? `Up to ${fmtNum(lo.up_to_min)} min → ${fmtNum(lo.points)} pt × intensity`
+          : `Up to ${fmtNum(lo.up_to_min)} min → ${fmtNum(lo.points)} pt`;
       }
-      return `${fmtNum(lo.points)}–${fmtNum(hi.points)} pt by duration`;
+      return rule.intensity_mode === "scale_by_level"
+        ? `${fmtNum(lo.points)}–${fmtNum(hi.points)} pt by duration × intensity`
+        : `${fmtNum(lo.points)}–${fmtNum(hi.points)} pt by duration`;
     }
     case "distance_scaled": {
       const sorted = [...rule.brackets].sort((a, b) => a.up_to_km - b.up_to_km);
@@ -66,6 +70,9 @@ export function formatActivityRuleDetail(rule: ActivityRule): string[] {
       const lines = [
         "Read the lines below in order: use the first where your duration (minutes) is at or below the cap; if longer than every cap, use the last line.",
       ];
+      if (rule.intensity_mode === "scale_by_level") {
+        lines.push("Then multiply points by intensity: 1 normal, 2 intermediate, 3 high.");
+      }
       for (const b of brackets) {
         lines.push(`≤ ${fmtNum(b.up_to_min)} min → ${fmtNum(b.points)} points`);
       }

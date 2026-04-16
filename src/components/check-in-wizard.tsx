@@ -51,6 +51,7 @@ export function CheckInWizard({
   );
   const [otherLabel, setOtherLabel] = useState("");
   const [durationMin, setDurationMin] = useState(45);
+  const [intensityLevel, setIntensityLevel] = useState<1 | 2 | 3>(1);
   const [distanceKm, setDistanceKm] = useState("");
   const [elevationM, setElevationM] = useState("");
   const [description, setDescription] = useState("");
@@ -71,6 +72,8 @@ export function CheckInWizard({
   const rule = findRule(scoringRules, resolvedActivityType);
   const needsDistance = rule ? activityNeedsDistance(rule) : false;
   const showElevation = activityAllowsElevation(resolvedActivityType);
+  const intensityEnabled =
+    rule?.mode === "duration_scaled" && rule.intensity_mode === "scale_by_level";
 
   const canNext0 =
     activityChoice === OTHER_ACTIVITY_VALUE
@@ -117,6 +120,7 @@ export function CheckInWizard({
         elevationM: elevForScore,
         defaultPointsIfUnknown: DEFAULT_OTHER_ACTIVITY_POINTS,
         priorHighIntensityCheckInsToday,
+        intensityLevel: intensityEnabled ? intensityLevel : undefined,
       },
     );
   }, [
@@ -130,6 +134,8 @@ export function CheckInWizard({
     elevNum,
     elevOk,
     priorHighIntensityCheckInsToday,
+    intensityEnabled,
+    intensityLevel,
   ]);
 
   return (
@@ -234,6 +240,24 @@ export function CheckInWizard({
               onChange={(e) => setDurationMin(Number(e.target.value))}
             />
           </label>
+          {intensityEnabled && (
+            <label className="block">
+              <span className="text-muted mb-2 block text-sm font-medium">
+                Intensity (1 = normal, 2 = intermediate, 3 = high)
+              </span>
+              <select
+                className="ui-input w-full"
+                value={intensityLevel}
+                onChange={(e) =>
+                  setIntensityLevel(Number(e.target.value) as 1 | 2 | 3)
+                }
+              >
+                <option value={1}>1 - Normal</option>
+                <option value={2}>2 - Intermediate</option>
+                <option value={3}>3 - High</option>
+              </select>
+            </label>
+          )}
           {needsDistance && (
             <label className="block">
               <span className="text-muted mb-2 block text-sm font-medium">
@@ -412,6 +436,13 @@ export function CheckInWizard({
           <input type="hidden" name="challengeId" value={challengeId} />
           <input type="hidden" name="activityType" value={resolvedActivityType} />
           <input type="hidden" name="durationMin" value={String(durationMin)} />
+          {intensityEnabled && (
+            <input
+              type="hidden"
+              name="intensity"
+              value={String(intensityLevel)}
+            />
+          )}
           <input
             type="hidden"
             name="distanceKm"

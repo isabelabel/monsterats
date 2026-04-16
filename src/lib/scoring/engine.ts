@@ -10,6 +10,7 @@ const OUTDOOR_FULL_CREDIT_KM = 1;
 function durationScaled(
   rule: Extract<ActivityRule, { mode: "duration_scaled" }>,
   durationMin: number,
+  intensityLevel: number,
 ): number {
   const brackets = [...rule.brackets].sort((a, b) => a.up_to_min - b.up_to_min);
   let chosen = brackets[0]!;
@@ -27,7 +28,9 @@ function durationScaled(
     const extraBlocks = Math.floor((durationMin - cap) / 30);
     points += extraBlocks * extra;
   }
-  return points;
+  const intensityScale =
+    rule.intensity_mode === "scale_by_level" ? intensityLevel : 1;
+  return points * intensityScale;
 }
 
 function elevationBonusFromBrackets(
@@ -116,6 +119,11 @@ export type ScoreCheckInOptions = {
    * today (same calendar day in the challenge timezone). The next one is 2nd+ → bonus cap.
    */
   priorHighIntensityCheckInsToday?: number;
+  /**
+   * For duration_scaled rules that define `intensity_mode: "scale_by_level"`.
+   * Values are expected to be 1 (normal), 2 (intermediate), 3 (high).
+   */
+  intensityLevel?: 1 | 2 | 3;
 };
 
 function fixedPointsWithHighIntensity(
@@ -160,7 +168,14 @@ export function scoreCheckIn(
       return { ok: true, points };
     }
     case "duration_scaled":
-      return { ok: true, points: durationScaled(rule, durationMin) };
+      return {
+        ok: true,
+        points: durationScaled(
+          rule,
+          durationMin,
+          opts?.intensityLevel ?? 1,
+        ),
+      };
     case "distance_scaled": {
       if (distanceKm == null || Number.isNaN(distanceKm)) {
         return { ok: false, error: "Distance is required for this activity." };
